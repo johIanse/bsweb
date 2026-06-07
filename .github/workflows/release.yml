@@ -63,7 +63,8 @@ jobs:
             --exclude 'storage/dump_*.php' \
             --exclude 'storage/framework' \
             --exclude 'storage/logs' \
-            --exclude 'dist'
+            --exclude 'dist' \
+            --exclude "$NAME"
           cat > "$NAME/RELEASE_INFO.txt" <<EOF
           Package: ${NAME}
           Type: clean source package
@@ -299,7 +300,8 @@ jobs:
             --exclude 'storage/logs' \
             --exclude 'runtime' \
             --exclude 'data' \
-            --exclude 'dist'
+            --exclude 'dist' \
+            --exclude "$NAME"
           npm install --prefix "$NAME/web" got@11 tough-cookie iconv-lite global-agent hpagent
           MODULE_DIR="$NAME" python3 tools/build-magisk-runtime.py
           test -x "$NAME/php/bin/php"
