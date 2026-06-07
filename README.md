@@ -72,3 +72,18 @@ sudo bash install.sh --reset-admin
 ```
 
 按提示输入管理员账号和密码即可。
+
+## GitHub 自动构建发布包
+
+仓库已配置 GitHub Actions：
+
+- 手动运行 `Build Release Packages` 可生成构建产物
+- 推送 `v*` 标签会自动创建 GitHub Release
+
+会生成：
+
+- 干净源码包：`*-source.tar.gz` / `*-source.zip`
+- 带 Node 模块依赖的完整包：`*-full.tar.gz` / `*-full.zip`
+- Windows 自解压包：`*-source.exe`
+
+注意：`.exe` 只是自解压源码包，不是 Windows 桌面程序；服务器部署仍推荐 Docker 单容器或双容器模式。

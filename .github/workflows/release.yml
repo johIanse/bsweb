@@ -1,0 +1,160 @@
+name: Build Release Packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Build source and full dependency packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate release safety
+        run: |
+          set -euo pipefail
+          forbidden='(bs\.hksp\.ltd|nas\.hksp\.ltd|/vol1/@apphome/trim\.openclaw/data/workspace/步数)'
+          if grep -R -n -E "$forbidden" . \
+            --exclude-dir=.git \
+            --exclude-dir=.github \
+            --exclude-dir=node_modules \
+            --exclude='*.log'; then
+            echo 'Forbidden local/domain string found in release source.' >&2
+            exit 1
+          fi
+          test ! -f .env
+          test ! -f config/database.php
+          bash -n install.sh
+          sh -n docker-entrypoint.sh
+          sh -n docker-entrypoint.single.sh
+
+      - name: Build clean source package
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME:-manual}"
+          VERSION="${VERSION//\//-}"
+          NAME="step-system-${VERSION}"
+          mkdir -p dist "$NAME"
+          rsync -a ./ "$NAME"/ \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.env' \
+            --exclude '.env.bak.*' \
+            --exclude 'config/database.php' \
+            --exclude 'config/database.php.bak.*' \
+            --exclude 'config/backup' \
+            --exclude 'cleanup-unused-*' \
+            --exclude '.acside' \
+            --exclude 'node_modules' \
+            --exclude 'storage/*.log' \
+            --exclude 'storage/test_*.php' \
+            --exclude 'storage/dump_*.php' \
+            --exclude 'storage/framework' \
+            --exclude 'storage/logs' \
+            --exclude 'dist'
+          cat > "$NAME/RELEASE_INFO.txt" <<EOF
+          Package: ${NAME}
+          Type: clean source package
+          Build: ${GITHUB_RUN_ID}
+
+          Install single-container Docker:
+            chmod +x install.sh
+            sudo bash install.sh --single
+
+          Install standard two-container Docker:
+            chmod +x install.sh
+            sudo bash install.sh --docker-repair
+          EOF
+          tar -czf "dist/${NAME}-source.tar.gz" "$NAME"
+          zip -qr "dist/${NAME}-source.zip" "$NAME"
+
+      - name: Build full dependency package
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME:-manual}"
+          VERSION="${VERSION//\//-}"
+          SRC_NAME="step-system-${VERSION}"
+          FULL_NAME="step-system-${VERSION}-full"
+          cp -a "$SRC_NAME" "$FULL_NAME"
+          npm install --prefix "$FULL_NAME" got@11 tough-cookie iconv-lite global-agent hpagent
+          cat > "$FULL_NAME/RELEASE_INFO.txt" <<EOF
+          Package: ${FULL_NAME}
+          Type: full package with Node dependencies
+          Build: ${GITHUB_RUN_ID}
+
+          This package includes node_modules for non-Docker/native deployments.
+          Docker deployments can still use install.sh; Docker images install their own dependencies.
+          EOF
+          tar -czf "dist/${FULL_NAME}.tar.gz" "$FULL_NAME"
+          zip -qr "dist/${FULL_NAME}.zip" "$FULL_NAME"
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: step-system-release-packages
+          path: dist/*
+
+      - name: Publish GitHub Release for tags
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+  windows-sfx:
+    name: Build Windows self-extracting exe
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build self-extracting archive
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          if (-not $version) { $version = "manual" }
+          $version = $version.Replace('/', '-')
+          $name = "step-system-$version-source"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          New-Item -ItemType Directory -Force -Path $name | Out-Null
+          robocopy . $name /E /XD .git .github .acside node_modules config\backup /XF .env config\database.php *.log | Out-Null
+          if ($LASTEXITCODE -le 7) { $global:LASTEXITCODE = 0 }
+          @"
+          Package: $name
+          Type: Windows self-extracting source archive
+
+          Notice:
+          This .exe only extracts the source files. It is not a Windows desktop app
+          and does not run PHP/Apache/MariaDB by itself.
+          "@ | Set-Content -Encoding UTF8 "$name\RELEASE_INFO.txt"
+          7z a -sfx7z.sfx "dist\$name.exe" $name | Out-Null
+
+      - name: Upload Windows exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: step-system-windows-self-extract-exe
+          path: dist/*.exe
+
+      - name: Publish exe for tag releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
