@@ -89,3 +89,25 @@ sudo bash install.sh --reset-admin
 - Windows 停止器：`Stop-StepSystem.exe`
 
 注意：Windows 可运行 exe 是 Docker 启动器，不是把 PHP/MariaDB 编译成单个桌面程序。使用前需要先安装并启动 Docker Desktop。双击 `Start-StepSystem.exe` 会自动启动单容器版并打开浏览器。
+
+### Windows 真单机版 EXE
+
+GitHub Actions 会生成不依赖 Docker 的 Windows 单机版：
+
+- `StepSystem-Portable.exe`
+- `*-windows-portable.zip`
+- `*-windows-portable.exe`
+
+单机版内置 PHP Windows 运行时、SQLite 数据库支持和 Node 依赖。双击后会启动本地网站：
+
+```text
+http://127.0.0.1:8088/
+```
+
+数据保存在：
+
+```text
+data/step-system.sqlite
+```
+
+注意：单机版适合本地 Windows 个人使用；服务器部署仍推荐 Docker 单容器或双容器。

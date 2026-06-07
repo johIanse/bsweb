@@ -50,7 +50,7 @@ class StepRunner{
 
     private static function pickSteps($userId,$min,$max){
         $last=0;
-        try{$s=Database::pdo()->prepare("SELECT MAX(steps) FROM step_logs WHERE user_id=? AND status='success' AND steps IS NOT NULL AND DATE(created_at)=CURDATE()");$s->execute([$userId]);$last=(int)$s->fetchColumn();}catch(\Throwable $e){}
+        try{$s=Database::pdo()->prepare("SELECT MAX(steps) FROM step_logs WHERE user_id=? AND status='success' AND steps IS NOT NULL AND substr(created_at,1,10)=?");$s->execute([$userId,date('Y-m-d')]);$last=(int)$s->fetchColumn();}catch(\Throwable $e){}
         if($last>0){$min=max($min,$last+1);if($min>$max)$max=$min;}
         return random_int($min,$max);
     }

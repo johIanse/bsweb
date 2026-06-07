@@ -177,3 +177,83 @@ jobs:
             dist/*windows-runnable.exe
             dist/Start-StepSystem.exe
             dist/Stop-StepSystem.exe
+
+  windows-portable:
+    name: Build Windows portable exe without Docker
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build portable package
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          if (-not $version) { $version = "manual" }
+          $version = $version.Replace('/', '-')
+          $name = "step-system-$version-windows-portable"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          New-Item -ItemType Directory -Force -Path $name | Out-Null
+
+          robocopy . $name /E /XD .git .github .acside config\backup data runtime /XF .env config\database.php *.log | Out-Null
+          if ($LASTEXITCODE -le 7) { $global:LASTEXITCODE = 0 }
+
+          npm install --prefix $name got@11 tough-cookie iconv-lite global-agent hpagent
+
+          $phpUrl = "https://windows.php.net/downloads/releases/php-8.3.15-nts-Win32-vs16-x64.zip"
+          $phpZip = "php.zip"
+          Invoke-WebRequest -Uri $phpUrl -OutFile $phpZip
+          New-Item -ItemType Directory -Force -Path "$name\runtime\php" | Out-Null
+          Expand-Archive $phpZip -DestinationPath "$name\runtime\php" -Force
+          Copy-Item "$name\runtime\php\php.ini-production" "$name\runtime\php\php.ini" -Force
+          Add-Content "$name\runtime\php\php.ini" "`nextension_dir=ext"
+          Add-Content "$name\runtime\php\php.ini" "extension=pdo_sqlite"
+          Add-Content "$name\runtime\php\php.ini" "extension=sqlite3"
+          Add-Content "$name\runtime\php\php.ini" "extension=curl"
+          Add-Content "$name\runtime\php\php.ini" "extension=mbstring"
+          Add-Content "$name\runtime\php\php.ini" "date.timezone=Asia/Shanghai"
+
+          @"
+          Package: $name
+          Type: Windows portable runnable package
+
+          Usage:
+          - Double-click StepSystem-Portable.exe
+          - No Docker required
+          - Runtime data is stored in data\step-system.sqlite
+
+          Notes:
+          - This package includes PHP for Windows and Node dependencies.
+          - It runs a local web service at http://127.0.0.1:8088/
+          "@ | Set-Content -Encoding UTF8 "$name\RELEASE_INFO.txt"
+
+          Install-Module ps2exe -Scope CurrentUser -Force
+          Invoke-ps2exe "$name\tools\windows\Start-StepSystem-Portable.ps1" "$name\StepSystem-Portable.exe" -title "步数系统单机版" -description "Step System Windows Portable" -company "johIanse" -product "Step System" -noConsole:$false
+
+          Compress-Archive -Path "$name\*" -DestinationPath "dist\$name.zip" -Force
+          7z a -sfx7z.sfx "dist\$name.exe" $name | Out-Null
+          Copy-Item "$name\StepSystem-Portable.exe" "dist\StepSystem-Portable.exe"
+
+      - name: Upload Windows portable artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: step-system-windows-portable
+          path: |
+            dist/*windows-portable.zip
+            dist/*windows-portable.exe
+            dist/StepSystem-Portable.exe
+
+      - name: Publish Windows portable artifacts for tag releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*windows-portable.zip
+            dist/*windows-portable.exe
+            dist/StepSystem-Portable.exe
+
