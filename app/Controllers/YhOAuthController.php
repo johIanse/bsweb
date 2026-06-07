@@ -3,7 +3,7 @@ namespace StepSystem\Controllers;
 use StepSystem\Core\Auth;use StepSystem\Core\Database;use StepSystem\Core\Flash;use StepSystem\Models\User;use StepSystem\Services\Setting;
 class YhOAuthController{
  private $base='https://yaohuo.me';
- private function cfg(){return Setting::getMany(['yh_oauth_enabled'=>'1','yh_oauth_register_enabled'=>'1','yh_oauth_app_id'=>'','yh_oauth_app_key'=>'','yh_oauth_callback'=>'https://bs.hksp.ltd/yh','registration_gift_days'=>'7']);}
+ private function cfg(){return Setting::getMany(['yh_oauth_enabled'=>'1','yh_oauth_register_enabled'=>'1','yh_oauth_app_id'=>'','yh_oauth_app_key'=>'','yh_oauth_callback'=>default_yh_callback_url(),'registration_gift_days'=>'7']);}
  public function login(){
   $c=$this->cfg(); if(trim($c['yh_oauth_app_id'])===''||trim($c['yh_oauth_app_key'])===''){Flash::set('授权登录暂未配置','error');redirect('index.php?r=login');}
   $state=bin2hex(random_bytes(16));$_SESSION['yh_oauth_state']=$state;
