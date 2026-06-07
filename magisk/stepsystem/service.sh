@@ -25,14 +25,21 @@ find_php(){
 sleep 15
 PHP_BIN=$(find_php || true)
 if [ -z "$PHP_BIN" ]; then
-  log "ERROR: php runtime not found. Install Termux php or put executable at $MODDIR/php/php"
+  log "ERROR: embedded php runtime not found in module"
   exit 0
 fi
 
+export TERMUX_PREFIX="$MODDIR/php"
+export PREFIX="$MODDIR/php"
+export LD_LIBRARY_PATH="$MODDIR/php/lib:$MODDIR/php/lib/php:$MODDIR/php/libexec:${LD_LIBRARY_PATH:-}"
+export PATH="$MODDIR/php/bin:$MODDIR/php/libexec:$PATH"
+export PHPRC="$MODDIR/php/lib"
+
 if "$PHP_BIN" -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
-  log "pdo_sqlite OK"
+  log "embedded pdo_sqlite OK"
 else
-  log "ERROR: php found at $PHP_BIN but pdo_sqlite is missing"
+  log "ERROR: embedded php exists but pdo_sqlite is missing"
+  "$PHP_BIN" -m >> "$LOG" 2>&1 || true
   exit 0
 fi
 

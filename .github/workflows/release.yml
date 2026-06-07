@@ -301,6 +301,9 @@ jobs:
             --exclude 'data' \
             --exclude 'dist'
           npm install --prefix "$NAME/web" got@11 tough-cookie iconv-lite global-agent hpagent
+          MODULE_DIR="$NAME" python3 tools/build-magisk-runtime.py
+          test -x "$NAME/php/bin/php"
+          test -f "$NAME/php/lib/php.ini"
           sed -i "s/^version=.*/version=${VERSION}/" "$NAME/module.prop"
           cd "$NAME"
           zip -qr "../dist/${NAME}.zip" .
