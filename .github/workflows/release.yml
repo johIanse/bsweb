@@ -154,7 +154,6 @@ jobs:
           Invoke-ps2exe "$name\tools\windows\Stop-StepSystem.ps1" "$name\Stop-StepSystem.exe" -title "步数系统停止器" -description "Step System Docker Stopper" -company "johIanse" -product "Step System" -noConsole:$false
 
           Compress-Archive -Path "$name\*" -DestinationPath "dist\$name-windows-runnable.zip" -Force
-          7z a -sfx7z.sfx "dist\$name-windows-runnable.exe" $name | Out-Null
           Copy-Item "$name\Start-StepSystem.exe" "dist\Start-StepSystem.exe"
           Copy-Item "$name\Stop-StepSystem.exe" "dist\Stop-StepSystem.exe"
 
@@ -164,7 +163,6 @@ jobs:
           name: step-system-windows-runnable
           path: |
             dist/*windows-runnable.zip
-            dist/*windows-runnable.exe
             dist/Start-StepSystem.exe
             dist/Stop-StepSystem.exe
 
@@ -174,7 +172,6 @@ jobs:
         with:
           files: |
             dist/*windows-runnable.zip
-            dist/*windows-runnable.exe
             dist/Start-StepSystem.exe
             dist/Stop-StepSystem.exe
 
@@ -205,7 +202,15 @@ jobs:
 
           npm install --prefix $name got@11 tough-cookie iconv-lite global-agent hpagent
 
-          $phpUrl = "https://windows.php.net/downloads/releases/php-8.3.15-nts-Win32-vs16-x64.zip"
+          $releaseJson = Invoke-RestMethod -Uri "https://windows.php.net/downloads/releases/releases.json"
+          $phpEntry = $releaseJson.PSObject.Properties | Where-Object { $_.Name -like "8.3*" -or $_.Name -eq "8.3" } | Select-Object -First 1
+          if (-not $phpEntry) { $phpEntry = $releaseJson.PSObject.Properties | Where-Object { $_.Name -like "8.*" } | Select-Object -First 1 }
+          $phpRel = $phpEntry.Value
+          $variant = $phpRel.PSObject.Properties | Where-Object { $_.Name -match "nts.*x64|x64.*nts" } | Select-Object -First 1
+          if (-not $variant) { $variant = $phpRel.PSObject.Properties | Where-Object { $_.Name -match "x64" } | Select-Object -First 1 }
+          if (-not $variant) { throw "No suitable PHP Windows x64 release found" }
+          $phpPath = $variant.Value.zip.path
+          $phpUrl = "https://windows.php.net/downloads/releases/$phpPath"
           $phpZip = "php.zip"
           Invoke-WebRequest -Uri $phpUrl -OutFile $phpZip
           New-Item -ItemType Directory -Force -Path "$name\runtime\php" | Out-Null
@@ -236,7 +241,6 @@ jobs:
           Invoke-ps2exe "$name\tools\windows\Start-StepSystem-Portable.ps1" "$name\StepSystem-Portable.exe" -title "步数系统单机版" -description "Step System Windows Portable" -company "johIanse" -product "Step System" -noConsole:$false
 
           Compress-Archive -Path "$name\*" -DestinationPath "dist\$name.zip" -Force
-          7z a -sfx7z.sfx "dist\$name.exe" $name | Out-Null
           Copy-Item "$name\StepSystem-Portable.exe" "dist\StepSystem-Portable.exe"
 
       - name: Upload Windows portable artifacts
@@ -245,7 +249,6 @@ jobs:
           name: step-system-windows-portable
           path: |
             dist/*windows-portable.zip
-            dist/*windows-portable.exe
             dist/StepSystem-Portable.exe
 
       - name: Publish Windows portable artifacts for tag releases
@@ -254,6 +257,5 @@ jobs:
         with:
           files: |
             dist/*windows-portable.zip
-            dist/*windows-portable.exe
             dist/StepSystem-Portable.exe
 
