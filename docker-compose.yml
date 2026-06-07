@@ -1,0 +1,34 @@
+services:
+  step-system:
+    build: .
+    container_name: step-system
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./:/var/www/html
+    environment:
+      DB_HOST: step-mysql
+      DB_NAME: step_system
+      DB_USER: root
+      DB_PASS: ${MYSQL_ROOT_PASSWORD:-}
+      STEP_PROXY_API_URL: "http://api.xiequ.cn/VAD/GetIp.aspx?act=get&uid=155084&vkey=278854F2E0E3EFF55DB6B8D0DDE5D46B&num=1&time=30&plat=0&re=1&type=0&so=1&ow=1&spl=1&addr=&db=1"
+      INSTALL_TOKEN: ${INSTALL_TOKEN:-change-me-install-token}
+      APP_DEBUG: ${APP_DEBUG:-0}
+    depends_on:
+      - step-mysql
+
+  step-mysql:
+    image: mysql:8.0
+    container_name: step-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}
+      MYSQL_DATABASE: step_system
+      TZ: Asia/Shanghai
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

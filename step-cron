@@ -1,0 +1,1 @@
+* * * * * root cd /var/www/html && /usr/local/bin/php scheduler.php >> /var/www/html/storage/step-scheduler.log 2>&1

@@ -1,0 +1,23 @@
+Release package: step-system-source-release-20260607.tar.gz
+Build time: 2026-06-07 22:58:26 +0800
+Type: source release package
+
+Excluded runtime/private/generated files:
+- .env
+- .env.bak.*
+- config/database.php
+- config/database.php.bak.*
+- config/backup
+- cleanup-unused-*
+- .git
+- .acside
+- node_modules
+- storage/*.log
+- storage/test_*.php
+- storage/dump_*.php
+- storage/framework
+- storage/logs
+
+Install:
+  chmod +x install.sh
+  sudo bash install.sh --docker-repair

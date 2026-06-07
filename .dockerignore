@@ -1,0 +1,5 @@
+config/database.php
+config.php
+database.sqlite
+*.db
+*.log

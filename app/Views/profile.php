@@ -1,0 +1,1 @@
+<div class="card form"><h2>个人资料</h2><p>用户名：<?=h($user['username'])?></p><p>角色：<?=h($user['role'])?></p><hr><h3>修改密码</h3><form method="post"><label>原密码</label><input name="old_password" type="password"><label>新密码</label><input name="new_password" type="password"><p><button class="btn">保存</button></p></form></div>

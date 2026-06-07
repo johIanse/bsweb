@@ -1,0 +1,1 @@
+<div class="card"><h2>系统错误</h2><p class="alert error"><?=h($message??'未知错误')?></p><p class="muted">请检查数据库配置或服务器日志。</p><p><a class="btn" href="index.php">返回首页</a></p></div>
