@@ -12,6 +12,8 @@ APP_NAME="步数系统"
 SERVICE_SLUG="step-system"
 APP_SERVICE="step-system"
 MYSQL_SERVICE="step-mysql"
+SINGLE_SERVICE="step-system-single"
+SINGLE_SLUG="step-single"
 DEFAULT_PORT="8088"
 DEFAULT_DOMAIN="服务器IP"
 DEFAULT_INSTALL_DIR="/www/wwwroot/step-system"
@@ -129,6 +131,10 @@ ensure_docker(){
 
 compose_cmd(){
   if docker compose version >/dev/null 2>&1; then docker compose -p "$SERVICE_SLUG" "$@"; else docker-compose -p "$SERVICE_SLUG" "$@"; fi
+}
+
+compose_single_cmd(){
+  if docker compose version >/dev/null 2>&1; then docker compose -p "$SINGLE_SLUG" -f docker-compose.single.yml "$@"; else docker-compose -p "$SINGLE_SLUG" -f docker-compose.single.yml "$@"; fi
 }
 
 compose_port_current(){
@@ -288,6 +294,120 @@ prompt_init_admin(){
     read -r -s -p "管理员密码：" admin_pass || true; echo
   fi
   init_admin_docker_with_values "$root_pass" "$admin_user" "$admin_pass"
+}
+
+
+init_admin_single_with_values(){
+  local admin_user="$1" admin_pass="$2"
+  [[ -n "$admin_user" && -n "$admin_pass" ]] || { warn "管理员账号或密码为空，跳过初始化"; return 1; }
+  (( ${#admin_pass} >= 6 )) || { warn "管理员密码至少 6 位"; return 1; }
+  info "初始化单容器数据表并重置管理员..."
+  if docker exec \
+    -e STEP_ADMIN_USER="$admin_user" \
+    -e STEP_ADMIN_PASS="$admin_pass" \
+    "$SINGLE_SERVICE" php -r '
+require "/var/www/html/config/bootstrap.php";
+require "/var/www/html/app/Core/Database.php";
+use StepSystem\Core\Database;
+$p = Database::pdo();
+Database::migrate($p);
+$u = getenv("STEP_ADMIN_USER");
+$pw = getenv("STEP_ADMIN_PASS");
+$p->prepare("DELETE FROM users WHERE role=?")->execute(["admin"]);
+$p->prepare("INSERT INTO users(username,password,role,status,expires_at,created_at) VALUES(?,?,?,?,?,?)")
+  ->execute([$u, password_hash($pw, PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
+echo "admin initialized: ".$u."\n";
+'; then
+    success "后台管理员已初始化：${admin_user}"
+  else
+    err "后台管理员初始化失败"
+    return 1
+  fi
+}
+
+prompt_init_admin_single(){
+  local admin_user admin_pass
+  if [[ -n "$CLI_ADMIN_USER" || -n "$CLI_ADMIN_PASS" ]]; then
+    admin_user="${CLI_ADMIN_USER:-$DEFAULT_ADMIN_USER}"
+    admin_pass="$CLI_ADMIN_PASS"
+  else
+    confirm "是否直接初始化/重置后台管理员？这样可跳过网页安装" "Y" || return 0
+    admin_user="$(ask "管理员账号" "$DEFAULT_ADMIN_USER")"
+    read -r -s -p "管理员密码：" admin_pass || true; echo
+  fi
+  init_admin_single_with_values "$admin_user" "$admin_pass"
+}
+
+wait_single_container(){
+  local i
+  info "等待单容器站点就绪..."
+  for i in $(seq 1 90); do
+    if docker exec "$SINGLE_SERVICE" php -r 'require "/var/www/html/config/bootstrap.php"; require "/var/www/html/app/Core/Database.php"; StepSystem\Core\Database::pdo(); echo "ok\n";' >/dev/null 2>&1; then
+      success "单容器数据库/PHP 已就绪"
+      return 0
+    fi
+    sleep 1
+  done
+  err "单容器未在 90 秒内就绪，请查看日志：docker compose -p ${SINGLE_SLUG} -f docker-compose.single.yml logs -f"
+  return 1
+}
+
+print_single_finish(){
+  local port="$1"
+  section "完成"
+  echo "${GREEN}${BOLD}Docker 单容器安装/修复完成${NC}"
+  echo
+  kv "访问地址" "http://服务器IP:${port}/"
+  kv "本机访问" "http://127.0.0.1:${port}/"
+  echo
+  echo "${BOLD}常用命令：${NC}"
+  echo "  cd ${SCRIPT_DIR}"
+  echo "  docker compose -p ${SINGLE_SLUG} -f docker-compose.single.yml ps"
+  echo "  docker compose -p ${SINGLE_SLUG} -f docker-compose.single.yml logs -f ${SINGLE_SERVICE}"
+  echo "  docker compose -p ${SINGLE_SLUG} -f docker-compose.single.yml restart"
+}
+
+docker_single_repair(){
+  need_root
+  banner
+  ensure_basic_tools
+  ensure_docker
+  section "配置参数"
+  local current_port port root_pass token old_proxy
+  current_port="$(awk 'match($0, /"[0-9]+:80"/) {s=substr($0,RSTART+1,RLENGTH-2); split(s,a,":"); print a[1]; exit}' "$SCRIPT_DIR/docker-compose.single.yml" 2>/dev/null || true)"
+  port="$(ask "宿主机访问端口" "${current_port:-$DEFAULT_PORT}")"
+  root_pass="$(env_get "$SCRIPT_DIR/.env" MYSQL_ROOT_PASSWORD)"; [[ -z "$root_pass" ]] && root_pass="$(rand_str 32)"
+  token="$(env_get "$SCRIPT_DIR/.env" INSTALL_TOKEN)"; [[ -z "$token" ]] && token="$(rand_str 40)"
+  old_proxy="$(env_get "$SCRIPT_DIR/.env" STEP_PROXY_API_URL)"
+
+  section "写入单容器配置"
+  [[ -f "$SCRIPT_DIR/.env" ]] && cp -a "$SCRIPT_DIR/.env" "$SCRIPT_DIR/.env.bak.$(date +%Y%m%d%H%M%S)"
+  cat > "$SCRIPT_DIR/.env" <<EOF_ENV
+APP_ENV=production
+APP_DEBUG=0
+APP_URL=http://localhost:${port}
+
+DB_HOST=127.0.0.1
+DB_NAME=${DEFAULT_DB_NAME}
+DB_USER=root
+DB_PASS=${root_pass}
+MYSQL_ROOT_PASSWORD=${root_pass}
+
+INSTALL_TOKEN=${token}
+STEP_PROXY_API_URL=${old_proxy}
+EOF_ENV
+  chmod 600 "$SCRIPT_DIR/.env" || true
+  backup_old_database_config
+  sed -i -E "s/\"[0-9]+:80\"/\"${port}:80\"/" "$SCRIPT_DIR/docker-compose.single.yml"
+
+  section "启动单容器"
+  cd "$SCRIPT_DIR"
+  compose_single_cmd up -d --build
+  compose_single_cmd ps
+  wait_single_container
+  prompt_init_admin_single
+  open_firewall_port "$port"
+  print_single_finish "$port"
 }
 
 print_docker_finish(){
@@ -471,6 +591,7 @@ show_status(){
   section "Docker"
   has_cmd docker && success "$(docker --version)" || warn "未安装 Docker"
   if [[ -f "$SCRIPT_DIR/docker-compose.yml" ]] && has_cmd docker; then cd "$SCRIPT_DIR" && compose_cmd ps 2>/dev/null || true; fi
+  if [[ -f "$SCRIPT_DIR/docker-compose.single.yml" ]] && has_cmd docker; then cd "$SCRIPT_DIR" && compose_single_cmd ps 2>/dev/null || true; fi
   section "PHP / Node / MySQL 客户端"
   check_bt || true
   check_php_env || true
@@ -486,7 +607,8 @@ uninstall_menu(){
   banner
   warn "该操作只停止服务/计划任务，不删除数据库 volume 和项目文件。"
   confirm "删除 /etc/cron.d/step-system？" "N" && rm -f /etc/cron.d/step-system && success "已删除计划任务"
-  if [[ -f "$SCRIPT_DIR/docker-compose.yml" ]] && confirm "停止 Docker Compose 服务？" "N"; then cd "$SCRIPT_DIR" && compose_cmd down && success "Docker 服务已停止，volume 未删除"; fi
+  if [[ -f "$SCRIPT_DIR/docker-compose.yml" ]] && confirm "停止双容器 Docker Compose 服务？" "N"; then cd "$SCRIPT_DIR" && compose_cmd down && success "双容器服务已停止，volume 未删除"; fi
+  if [[ -f "$SCRIPT_DIR/docker-compose.single.yml" ]] && confirm "停止单容器 Docker Compose 服务？" "N"; then cd "$SCRIPT_DIR" && compose_single_cmd down && success "单容器服务已停止，volume 未删除"; fi
 }
 
 parse_cli_options(){
@@ -510,19 +632,21 @@ main_menu(){
   cat <<EOF_MENU
 ${BOLD}请选择操作：${NC}
   ${GREEN}1)${NC} 宝塔/PHP 环境安装
-  ${GREEN}2)${NC} Docker 一键安装/修复（推荐）
-  ${GREEN}3)${NC} 查看环境/服务状态
-  ${GREEN}4)${NC} 停止/卸载服务（保留数据）
+  ${GREEN}2)${NC} Docker 双容器安装/修复（标准）
+  ${GREEN}3)${NC} Docker 单容器安装/修复（简单）
+  ${GREEN}4)${NC} 查看环境/服务状态
+  ${GREEN}5)${NC} 停止/卸载服务（保留数据）
   ${GREEN}0)${NC} 退出
 EOF_MENU
   echo
   local choice
-  read -r -p "请输入选项 [0-4]: " choice || { warn "没有读取到输入，已退出"; exit 1; }
+  read -r -p "请输入选项 [0-5]: " choice || { warn "没有读取到输入，已退出"; exit 1; }
   case "${choice:-}" in
     1) install_bt_php ;;
     2) docker_one_click_repair ;;
-    3) show_status ;;
-    4) uninstall_menu ;;
+    3) docker_single_repair ;;
+    4) show_status ;;
+    5) uninstall_menu ;;
     0) exit 0 ;;
     *) warn "无效选择"; sleep 1; main_menu ;;
   esac
@@ -532,14 +656,16 @@ parse_cli_options "$@"
 
 case "${ACTION:-}" in
   --docker-repair|--docker|docker) docker_one_click_repair ;;
+  --single|single|--docker-single) docker_single_repair ;;
   --reset-admin|reset-admin) reset_admin_command "$@" ;;
   --status|status) show_status ;;
   --help|-h|help)
     cat <<EOF_HELP
 用法：
   sudo bash install.sh                 打开交互菜单
-  sudo bash install.sh --docker-repair Docker 一键安装/修复
-  sudo bash install.sh --docker-repair --admin-user 账号 --admin-pass 密码
+  sudo bash install.sh --docker-repair Docker 双容器安装/修复
+  sudo bash install.sh --single        Docker 单容器安装/修复
+  sudo bash install.sh --single --admin-user 账号 --admin-pass 密码
   sudo bash install.sh --reset-admin   重置后台管理员
   bash install.sh --status             查看状态
 EOF_HELP

@@ -1,0 +1,26 @@
+services:
+  step-system-single:
+    build:
+      context: .
+      dockerfile: Dockerfile.single
+    image: step-system-single:latest
+    container_name: step-system-single
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./:/var/www/html
+      - single_mysql_data:/var/lib/mysql
+    environment:
+      DB_HOST: 127.0.0.1
+      DB_NAME: step_system
+      DB_USER: root
+      DB_PASS: ${MYSQL_ROOT_PASSWORD:-}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}
+      STEP_PROXY_API_URL: ${STEP_PROXY_API_URL:-}
+      INSTALL_TOKEN: ${INSTALL_TOKEN:-change-me-install-token}
+      APP_DEBUG: ${APP_DEBUG:-0}
+      TZ: Asia/Shanghai
+
+volumes:
+  single_mysql_data:

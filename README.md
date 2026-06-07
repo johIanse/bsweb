@@ -9,32 +9,55 @@ chmod +x install.sh
 sudo bash install.sh
 ```
 
-推荐直接选：
+菜单提供三种部署方式：
 
 ```text
-2) Docker 一键安装/修复（推荐）
+1) 宝塔/PHP 环境安装
+2) Docker 双容器安装/修复（标准）
+3) Docker 单容器安装/修复（简单）
 ```
 
-也可以非交互执行：
+## 推荐选择
+
+新手想省事：
+
+```bash
+sudo bash install.sh --single
+```
+
+标准 Docker 部署：
 
 ```bash
 sudo bash install.sh --docker-repair
 ```
 
-## 新版脚本特点
+## 单容器模式
 
-- 美化菜单和步骤分区
-- 固定 Docker Compose 项目名为 `step-system`
-- 修复中文目录导致的 `project name must not be empty`
-- 保留已有 `.env` 里的 `MYSQL_ROOT_PASSWORD` 和 `INSTALL_TOKEN`
-- 自动写入 Docker 版 `config/database.php`
-- 自动修复 MySQL `root@%` 权限
-- 可直接初始化/重置后台管理员
-- 统一输出访问地址、数据库填写项和管理命令
+单容器模式把这些服务放到一个容器里：
 
-## Docker 管理命令
+- PHP / Apache
+- MariaDB
+- cron
+- Node 依赖
 
-在项目目录下执行：
+优点是简单，只有一个容器、一个端口，不会遇到容器间数据库权限问题。
+
+常用命令：
+
+```bash
+docker compose -p step-single -f docker-compose.single.yml ps
+docker compose -p step-single -f docker-compose.single.yml logs -f step-system-single
+docker compose -p step-single -f docker-compose.single.yml restart
+```
+
+## 双容器模式
+
+双容器模式更标准：
+
+- `step-system`：PHP / Apache / cron / Node
+- `step-mysql`：MySQL
+
+常用命令：
 
 ```bash
 docker compose -p step-system ps
@@ -43,8 +66,6 @@ docker compose -p step-system restart
 ```
 
 ## 重置后台管理员
-
-在项目目录下执行：
 
 ```bash
 sudo bash install.sh --reset-admin
