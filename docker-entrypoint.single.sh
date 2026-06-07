@@ -30,7 +30,18 @@ for i in $(seq 1 60); do
   fi
 done
 
-mysql --socket=/run/mysqld/mysqld.sock -uroot <<SQL
+MYSQL_AUTH=""
+if [ -n "$DB_PASS" ] && mysql --socket=/run/mysqld/mysqld.sock -uroot -p"$DB_PASS" -e "SELECT 1" >/dev/null 2>&1; then
+  MYSQL_AUTH="-p$DB_PASS"
+elif mysql --socket=/run/mysqld/mysqld.sock -uroot -e "SELECT 1" >/dev/null 2>&1; then
+  MYSQL_AUTH=""
+else
+  echo "[single] cannot login MariaDB as root with configured password or empty password" >&2
+  tail -80 /var/www/html/storage/mysql.log >&2 || true
+  exit 1
+fi
+
+mysql --socket=/run/mysqld/mysqld.sock -uroot $MYSQL_AUTH <<SQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_PASS}';
 CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
