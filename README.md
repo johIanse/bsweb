@@ -84,6 +84,8 @@ sudo bash install.sh --reset-admin
 
 - 干净源码包：`*-source.tar.gz` / `*-source.zip`
 - 带 Node 模块依赖的完整包：`*-full.tar.gz` / `*-full.zip`
-- Windows 自解压包：`*-source.exe`
+- Windows 可运行启动包：`*-windows-runnable.zip` / `*-windows-runnable.exe`
+- Windows 启动器：`Start-StepSystem.exe`
+- Windows 停止器：`Stop-StepSystem.exe`
 
-注意：`.exe` 只是自解压源码包，不是 Windows 桌面程序；服务器部署仍推荐 Docker 单容器或双容器模式。
+注意：Windows 可运行 exe 是 Docker 启动器，不是把 PHP/MariaDB 编译成单个桌面程序。使用前需要先安装并启动 Docker Desktop。双击 `Start-StepSystem.exe` 会自动启动单容器版并打开浏览器。

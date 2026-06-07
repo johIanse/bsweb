@@ -126,7 +126,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build self-extracting archive
+      - name: Build Windows launcher exe and self-extracting archive
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}"
@@ -139,22 +139,41 @@ jobs:
           if ($LASTEXITCODE -le 7) { $global:LASTEXITCODE = 0 }
           @"
           Package: $name
-          Type: Windows self-extracting source archive
+          Type: Windows source archive with runnable launcher
 
-          Notice:
-          This .exe only extracts the source files. It is not a Windows desktop app
-          and does not run PHP/Apache/MariaDB by itself.
+          Files:
+          - Start-StepSystem.exe: launches the single-container Docker deployment and opens browser
+          - Stop-StepSystem.exe: stops the single-container Docker deployment, keeping data volume
+
+          Requirement:
+          - Docker Desktop must be installed and running.
           "@ | Set-Content -Encoding UTF8 "$name\RELEASE_INFO.txt"
-          7z a -sfx7z.sfx "dist\$name.exe" $name | Out-Null
 
-      - name: Upload Windows exe artifact
+          Install-Module ps2exe -Scope CurrentUser -Force
+          Invoke-ps2exe "$name\tools\windows\Start-StepSystem.ps1" "$name\Start-StepSystem.exe" -title "步数系统启动器" -description "Step System Docker Launcher" -company "johIanse" -product "Step System" -noConsole:$false
+          Invoke-ps2exe "$name\tools\windows\Stop-StepSystem.ps1" "$name\Stop-StepSystem.exe" -title "步数系统停止器" -description "Step System Docker Stopper" -company "johIanse" -product "Step System" -noConsole:$false
+
+          Compress-Archive -Path "$name\*" -DestinationPath "dist\$name-windows-runnable.zip" -Force
+          7z a -sfx7z.sfx "dist\$name-windows-runnable.exe" $name | Out-Null
+          Copy-Item "$name\Start-StepSystem.exe" "dist\Start-StepSystem.exe"
+          Copy-Item "$name\Stop-StepSystem.exe" "dist\Stop-StepSystem.exe"
+
+      - name: Upload Windows runnable artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: step-system-windows-self-extract-exe
-          path: dist/*.exe
+          name: step-system-windows-runnable
+          path: |
+            dist/*windows-runnable.zip
+            dist/*windows-runnable.exe
+            dist/Start-StepSystem.exe
+            dist/Stop-StepSystem.exe
 
-      - name: Publish exe for tag releases
+      - name: Publish Windows runnable artifacts for tag releases
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.exe
+          files: |
+            dist/*windows-runnable.zip
+            dist/*windows-runnable.exe
+            dist/Start-StepSystem.exe
+            dist/Stop-StepSystem.exe
