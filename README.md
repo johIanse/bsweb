@@ -111,3 +111,30 @@ data/step-system.sqlite
 ```
 
 注意：单机版适合本地 Windows 个人使用；服务器部署仍推荐 Docker 单容器或双容器。
+
+## Android Magisk 模块
+
+Release 会生成：
+
+```text
+step-system-版本-magisk.zip
+```
+
+这是 Android/Magisk 本地服务模块，安装后尝试在手机本机启动：
+
+```text
+http://127.0.0.1:8088/
+```
+
+当前模块包内包含源码和 Node 依赖。PHP 运行时有两种方式：
+
+1. 手机已安装 Termux PHP，并带 `pdo_sqlite` 扩展；或
+2. 后续把 Android arm64 PHP 可执行文件放到模块的 `php/php`。
+
+日志位置：
+
+```text
+/data/adb/stepsystem/logs/service.log
+```
+
+说明：Magisk 模块版适合已 Root 的 Android 设备。完全内置 Android PHP 运行时会继续完善。

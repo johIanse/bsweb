@@ -259,3 +259,61 @@ jobs:
             dist/*windows-portable.zip
             dist/StepSystem-Portable.exe
 
+  magisk-module:
+    name: Build Magisk module package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Magisk module zip
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME:-manual}"
+          VERSION="${VERSION//\//-}"
+          NAME="step-system-${VERSION}-magisk"
+          mkdir -p dist "$NAME"
+          rsync -a magisk/stepsystem/ "$NAME"/
+          mkdir -p "$NAME/web"
+          rsync -a ./ "$NAME/web"/ \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'magisk' \
+            --exclude '.env' \
+            --exclude '.env.bak.*' \
+            --exclude 'config/database.php' \
+            --exclude 'config/database.php.bak.*' \
+            --exclude 'config/backup' \
+            --exclude 'cleanup-unused-*' \
+            --exclude '.acside' \
+            --exclude 'node_modules' \
+            --exclude 'storage/*.log' \
+            --exclude 'storage/test_*.php' \
+            --exclude 'storage/dump_*.php' \
+            --exclude 'storage/framework' \
+            --exclude 'storage/logs' \
+            --exclude 'runtime' \
+            --exclude 'data' \
+            --exclude 'dist'
+          npm install --prefix "$NAME/web" got@11 tough-cookie iconv-lite global-agent hpagent
+          sed -i "s/^version=.*/version=${VERSION}/" "$NAME/module.prop"
+          cd "$NAME"
+          zip -qr "../dist/${NAME}.zip" .
+
+      - name: Upload Magisk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: step-system-magisk-module
+          path: dist/*-magisk.zip
+
+      - name: Publish Magisk module for tag releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*-magisk.zip
+
