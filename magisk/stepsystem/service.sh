@@ -103,7 +103,11 @@ start_service(){
 init_default_admin(){
   log "checking default admin and sqlite database"
   cd "$WEB" || { log "ERROR: cd $WEB failed before init"; return 1; }
-  "$PHP_BIN"     -d sys_temp_dir="$TMPDIR_STEP"     -d session.save_path="$SESSIONDIR"     -d opcache.enable_cli=0     -r '
+  "$PHP_BIN" \
+    -d sys_temp_dir="$TMPDIR_STEP" \
+    -d session.save_path="$SESSIONDIR" \
+    -d opcache.enable_cli=0 \
+    -r '
 require "config/bootstrap.php";
 require "app/Core/Database.php";
 use StepSystem\Core\Database;
@@ -128,7 +132,12 @@ if ($count === 0) {
     SERVER_LOG="$LOGDIR/php-server.log"
     log "starting PHP built-in server on 127.0.0.1:$PORT"
     log "server cwd=$(pwd) docroot=$WEB/public server_log=$SERVER_LOG"
-    nohup "$PHP_BIN"       -d variables_order=EGPCS       -d sys_temp_dir="$TMPDIR_STEP"       -d session.save_path="$SESSIONDIR"       -d opcache.enable_cli=0       -S "127.0.0.1:$PORT" -t "$WEB/public" >> "$SERVER_LOG" 2>&1 &
+    nohup "$PHP_BIN" \
+      -d variables_order=EGPCS \
+      -d sys_temp_dir="$TMPDIR_STEP" \
+      -d session.save_path="$SESSIONDIR" \
+      -d opcache.enable_cli=0 \
+      -S "127.0.0.1:$PORT" -t "$WEB/public" >> "$SERVER_LOG" 2>&1 &
     echo $! > "$PIDFILE"
     sleep 3
   fi
@@ -140,7 +149,12 @@ if ($count === 0) {
     log "php server log tail: $(tail -40 "$LOGDIR/php-server.log" 2>&1 | tr '
 ' '; ')"
     log "retrying on 0.0.0.0:$PORT"
-    nohup "$PHP_BIN"       -d variables_order=EGPCS       -d sys_temp_dir="$TMPDIR_STEP"       -d session.save_path="$SESSIONDIR"       -d opcache.enable_cli=0       -S "0.0.0.0:$PORT" -t "$WEB/public" >> "$LOGDIR/php-server.log" 2>&1 &
+    nohup "$PHP_BIN" \
+      -d variables_order=EGPCS \
+      -d sys_temp_dir="$TMPDIR_STEP" \
+      -d session.save_path="$SESSIONDIR" \
+      -d opcache.enable_cli=0 \
+      -S "0.0.0.0:$PORT" -t "$WEB/public" >> "$LOGDIR/php-server.log" 2>&1 &
     echo $! > "$PIDFILE"
     sleep 3
     if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then

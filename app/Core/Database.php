@@ -5,7 +5,12 @@ class Database{
     private static $pdo;
     private static $driver;
     public static function configFile(){return __DIR__.'/../../config/database.php';}
-    public static function installed(){return is_file(self::configFile());}
+    public static function installed(){
+        if(is_file(self::configFile()))return true;
+        $driver=strtolower((string)(getenv('DB_DRIVER')?:''));
+        if($driver==='sqlite')return true;
+        return false;
+    }
     public static function envConfig(){
         $driver=strtolower((string)(getenv('DB_DRIVER')?:''));
         if($driver==='sqlite'){
