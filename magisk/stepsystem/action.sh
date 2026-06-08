@@ -1,5 +1,10 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
+case "$MODDIR" in
+  /*) ;;
+  *) MODDIR="$(cd "$MODDIR" 2>/dev/null && pwd)" ;;
+esac
+[ -n "$MODDIR" ] || MODDIR=/data/adb/modules/stepsystem
 LOG=/sdcard/步数管理-action.log
 {
   echo "===== 步数管理 手动诊断 $(date '+%Y-%m-%d %H:%M:%S') ====="
@@ -17,7 +22,10 @@ LOG=/sdcard/步数管理-action.log
   (ss -tunlp 2>/dev/null || netstat -tunlp 2>/dev/null) | grep 8058 || true
   echo
   echo "service log:"
-  tail -120 /data/adb/stepsystem/logs/service.log 2>&1
+  tail -160 /data/adb/stepsystem/logs/service.log 2>&1
+  echo
+  echo "php server log:"
+  tail -160 /data/adb/stepsystem/logs/php-server.log 2>&1
 } | tee "$LOG"
 echo "诊断日志已保存: $LOG"
 echo "服务日志也会复制到: /sdcard/步数管理-service.log"

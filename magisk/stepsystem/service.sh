@@ -1,5 +1,10 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
+case "$MODDIR" in
+  /*) ;;
+  *) MODDIR="$(cd "$MODDIR" 2>/dev/null && pwd)" ;;
+esac
+[ -n "$MODDIR" ] || MODDIR=/data/adb/modules/stepsystem
 BASE=/data/adb/stepsystem
 WEB=$MODDIR/web
 LOGDIR=$BASE/logs
@@ -93,8 +98,10 @@ start_service(){
     log "already running pid=$(cat "$PIDFILE")"
   else
     cd "$WEB" || { log "ERROR: cd $WEB failed"; return 1; }
+    SERVER_LOG="$LOGDIR/php-server.log"
     log "starting PHP built-in server on 127.0.0.1:$PORT"
-    nohup "$PHP_BIN" -d variables_order=EGPCS -S "127.0.0.1:$PORT" -t public >> "$LOG" 2>&1 &
+    log "server cwd=$(pwd) docroot=$WEB/public server_log=$SERVER_LOG"
+    nohup "$PHP_BIN" -d variables_order=EGPCS -S "127.0.0.1:$PORT" -t "$WEB/public" >> "$SERVER_LOG" 2>&1 &
     echo $! > "$PIDFILE"
     sleep 3
   fi
@@ -103,7 +110,20 @@ start_service(){
     log "started pid=$(cat "$PIDFILE")"
   else
     log "ERROR: php server process is not running"
-    return 1
+    log "php server log tail: $(tail -40 "$LOGDIR/php-server.log" 2>&1 | tr '
+' '; ')"
+    log "retrying on 0.0.0.0:$PORT"
+    nohup "$PHP_BIN" -d variables_order=EGPCS -S "0.0.0.0:$PORT" -t "$WEB/public" >> "$LOGDIR/php-server.log" 2>&1 &
+    echo $! > "$PIDFILE"
+    sleep 3
+    if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+      log "started fallback pid=$(cat "$PIDFILE") on 0.0.0.0:$PORT"
+    else
+      log "ERROR: fallback php server also exited"
+      log "php server log tail: $(tail -80 "$LOGDIR/php-server.log" 2>&1 | tr '
+' '; ')"
+      return 1
+    fi
   fi
 
   if command -v ss >/dev/null 2>&1; then
