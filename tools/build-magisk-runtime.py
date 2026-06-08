@@ -5,24 +5,7 @@ import urllib.request
 from pathlib import Path
 
 BASE = "https://packages.termux.dev/apt/termux-main/"
-NEEDED = [
-    "php",
-    "libsqlite",
-    "sqlite",
-    "libcurl",
-    "curl",
-    "openssl",
-    "zlib",
-    "libiconv",
-    "libxml2",
-    "oniguruma",
-    "pcre2",
-    "readline",
-    "libandroid-glob",
-    "libandroid-support",
-    "libcrypt",
-    "ncurses",
-]
+NEEDED = ["php", "curl", "sqlite", "ncurses"]
 
 
 def parse_packages(text: str):
@@ -36,6 +19,40 @@ def parse_packages(text: str):
         if "Package" in d and "Filename" in d:
             packages[d["Package"]] = d
     return packages
+
+
+def dep_names(meta):
+    raw = meta.get("Depends", "")
+    names = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        part = part.split(" ", 1)[0].strip()
+        part = part.split("|", 1)[0].strip()
+        if part:
+            names.append(part)
+    return names
+
+
+def resolve_deps(packages, roots):
+    todo = list(roots)
+    seen = set()
+    ordered = []
+    while todo:
+        name = todo.pop(0)
+        if name in seen:
+            continue
+        seen.add(name)
+        meta = packages.get(name)
+        if not meta:
+            print(f"skip missing package {name}")
+            continue
+        ordered.append(name)
+        for dep in dep_names(meta):
+            if dep not in seen:
+                todo.append(dep)
+    return ordered
 
 
 def main():
@@ -52,11 +69,8 @@ def main():
     ).read().decode("utf-8", "replace")
     packages = parse_packages(pkg_text)
 
-    for name in NEEDED:
-        meta = packages.get(name)
-        if not meta:
-            print(f"skip missing package {name}")
-            continue
+    for name in resolve_deps(packages, NEEDED):
+        meta = packages[name]
         fn = meta["Filename"]
         url = BASE + fn
         path = debdir / Path(fn).name.replace(":", "_")
@@ -78,11 +92,8 @@ def main():
     ini.parent.mkdir(parents=True, exist_ok=True)
     ini.write_text(
         "date.timezone=Asia/Shanghai\n"
-        "extension_dir=/data/adb/modules/stepsystem/php/lib/php\n"
-        "extension=pdo_sqlite\n"
-        "extension=sqlite3\n"
-        "extension=curl\n"
-        "extension=mbstring\n",
+        "display_errors=0\n"
+        "log_errors=1\n",
         encoding="utf-8",
     )
 

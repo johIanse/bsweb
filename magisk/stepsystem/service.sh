@@ -23,6 +23,8 @@ find_php(){
   return 1
 }
 
+log "service script start MODDIR=$MODDIR PORT=$PORT"
+
 sleep 15
 PHP_BIN=$(find_php || true)
 if [ -z "$PHP_BIN" ]; then
@@ -35,13 +37,16 @@ export PREFIX="$MODDIR/php"
 export LD_LIBRARY_PATH="$MODDIR/php/lib:$MODDIR/php/lib/php:$MODDIR/php/libexec:${LD_LIBRARY_PATH:-}"
 export PATH="$MODDIR/php/bin:$MODDIR/php/libexec:$PATH"
 export PHPRC="$MODDIR/php/lib"
+export PHP_INI_SCAN_DIR=
+
+log "using PHP_BIN=$PHP_BIN"
+"$PHP_BIN" -v >> "$LOG" 2>&1 || log "WARN: php -v failed"
+"$PHP_BIN" -m >> "$LOG" 2>&1 || log "WARN: php -m failed"
 
 if "$PHP_BIN" -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
-  log "embedded pdo_sqlite OK"
+  log "pdo_sqlite OK"
 else
-  log "ERROR: embedded php exists but pdo_sqlite is missing"
-  "$PHP_BIN" -m >> "$LOG" 2>&1 || true
-  exit 0
+  log "WARN: pdo_sqlite missing; service will still start, but database pages may fail"
 fi
 
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
@@ -58,6 +63,10 @@ export NODE_PATH="$WEB/node_modules"
 export TZ=Asia/Shanghai
 
 init_default_admin(){
+  if ! "$PHP_BIN" -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
+    log "skip default admin init: pdo_sqlite unavailable"
+    return 0
+  fi
   "$PHP_BIN" -r '
 require "config/bootstrap.php";
 require "app/Core/Database.php";
@@ -75,6 +84,11 @@ if ((int)$s->fetchColumn() === 0) {
 cd "$WEB" || exit 0
 init_default_admin
 log "starting Step System on 127.0.0.1:$PORT with $PHP_BIN"
-nohup "$PHP_BIN" -S "127.0.0.1:$PORT" -t public >> "$LOG" 2>&1 &
+nohup "$PHP_BIN" -d variables_order=EGPCS -S "127.0.0.1:$PORT" -t public >> "$LOG" 2>&1 &
 echo $! > "$PIDFILE"
-log "started pid=$(cat "$PIDFILE")"
+sleep 2
+if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+  log "started pid=$(cat "$PIDFILE")"
+else
+  log "ERROR: php server failed to stay running"
+fi

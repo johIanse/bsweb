@@ -1,6 +1,6 @@
 id=stepsystem
-name=步数系统 8058 本地服务
+name=步数管理
 version=v1.0.0
 versionCode=100
 modifier=johIanse
-description=步数系统 Magisk 本地服务模块，内置 Android arm64 PHP 运行时，启动地址 http://127.0.0.1:8058/，默认后台 admin/admin。
+description=步数管理 Magisk 本地服务模块，内置 Android arm64 PHP 运行时，启动地址 http://127.0.0.1:8058/，默认后台 admin/admin。
