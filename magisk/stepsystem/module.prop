@@ -3,4 +3,4 @@ name=Step System Portable Server
 version=v1.0.0
 versionCode=100
 modifier=johIanse
-description=Run Step System locally on Android via Magisk. Includes Android arm64 PHP runtime and starts a PHP+SQLite web service at http://127.0.0.1:8088/.
+description=Run Step System locally on Android via Magisk. Includes Android arm64 PHP runtime and starts a PHP+SQLite web service at http://127.0.0.1:8058/.

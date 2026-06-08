@@ -1,7 +1,7 @@
 param(
   [int]$Port = 8088,
-  [string]$AdminUser = "",
-  [string]$AdminPass = ""
+  [string]$AdminUser = "admin",
+  [string]$AdminPass = "admin"
 )
 
 $ErrorActionPreference = "Stop"
@@ -49,7 +49,7 @@ Write-Host "初始化 SQLite 数据库..." -ForegroundColor Yellow
 if ($LASTEXITCODE -ne 0) { Pause-Exit $LASTEXITCODE }
 
 if ($AdminUser -and $AdminPass) {
-  Write-Host "初始化管理员..." -ForegroundColor Yellow
+  Write-Host "检查默认管理员..." -ForegroundColor Yellow
   $env:STEP_ADMIN_USER = $AdminUser
   $env:STEP_ADMIN_PASS = $AdminPass
   $code = @'
@@ -60,10 +60,14 @@ $p = Database::pdo();
 Database::migrate($p);
 $u = getenv("STEP_ADMIN_USER");
 $pw = getenv("STEP_ADMIN_PASS");
-$p->prepare("DELETE FROM users WHERE role=?")->execute(["admin"]);
-$p->prepare("INSERT INTO users(username,password,role,status,expires_at,created_at) VALUES(?,?,?,?,?,?)")
-  ->execute([$u, password_hash($pw, PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
-echo "ADMIN_OK: ".$u.PHP_EOL;
+$count = (int)$p->query("SELECT COUNT(*) FROM users WHERE role=".$p->quote("admin"))->fetchColumn();
+if ($count === 0) {
+  $p->prepare("INSERT INTO users(username,password,role,status,expires_at,created_at) VALUES(?,?,?,?,?,?)")
+    ->execute([$u, password_hash($pw, PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
+  echo "DEFAULT_ADMIN_CREATED: ".$u.PHP_EOL;
+} else {
+  echo "ADMIN_EXISTS".PHP_EOL;
+}
 '@
   Push-Location $Root
   & $Php -r $code
@@ -90,6 +94,7 @@ if (-not $ok) {
 }
 
 Write-Host "启动成功：$url" -ForegroundColor Green
+Write-Host "默认管理员：admin / admin" -ForegroundColor Green
 Write-Host "数据文件：$DbPath" -ForegroundColor Cyan
 Start-Process $url
 Write-Host ""

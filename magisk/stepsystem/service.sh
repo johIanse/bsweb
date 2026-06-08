@@ -5,7 +5,7 @@ WEB=$MODDIR/web
 LOGDIR=$BASE/logs
 RUNDIR=$BASE/run
 DATADIR=$BASE/data
-PORT=${STEP_SYSTEM_PORT:-8088}
+PORT=${STEP_SYSTEM_PORT:-8058}
 mkdir -p "$LOGDIR" "$RUNDIR" "$DATADIR" "$WEB/storage"
 LOG=$LOGDIR/service.log
 PIDFILE=$RUNDIR/php.pid
@@ -56,7 +56,23 @@ export DB_PATH="$DATADIR/step-system.sqlite"
 export NODE_PATH="$WEB/node_modules"
 export TZ=Asia/Shanghai
 
+init_default_admin(){
+  "$PHP_BIN" -r '
+require "config/bootstrap.php";
+require "app/Core/Database.php";
+use StepSystem\Core\Database;
+$p = Database::pdo();
+$s = $p->query("SELECT COUNT(*) FROM users WHERE role=".$p->quote("admin"));
+if ((int)$s->fetchColumn() === 0) {
+  $p->prepare("INSERT INTO users(username,password,role,status,expires_at,created_at) VALUES(?,?,?,?,?,?)")
+    ->execute(["admin", password_hash("admin", PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
+  echo "DEFAULT_ADMIN_CREATED\n";
+}
+' >> "$LOG" 2>&1 || log "WARN: default admin init failed"
+}
+
 cd "$WEB" || exit 0
+init_default_admin
 log "starting Step System on 127.0.0.1:$PORT with $PHP_BIN"
 nohup "$PHP_BIN" -S "127.0.0.1:$PORT" -t public >> "$LOG" 2>&1 &
 echo $! > "$PIDFILE"

@@ -230,12 +230,14 @@ jobs:
 
           Usage:
           - Double-click StepSystem-Portable.exe
+          - Default admin login: admin / admin
           - No Docker required
           - Runtime data is stored in data\step-system.sqlite
 
           Notes:
           - This package includes PHP for Windows and Node dependencies.
           - It runs a local web service at http://127.0.0.1:8088/
+          - Default admin login: admin / admin
           "@ | Set-Content -Encoding UTF8 "$name\RELEASE_INFO.txt"
 
           Install-Module ps2exe -Scope CurrentUser -Force
@@ -307,6 +309,15 @@ jobs:
           test -x "$NAME/php/bin/php"
           test -f "$NAME/php/lib/php.ini"
           sed -i "s/^version=.*/version=${VERSION}/" "$NAME/module.prop"
+          sed -i "s#http://127.0.0.1:8058/#http://127.0.0.1:8058/#" "$NAME/module.prop"
+          cat >> "$NAME/README.txt" <<EOF
+          Step System Magisk module
+
+          URL: http://127.0.0.1:8058/
+          Default admin: admin / admin
+          Data: /data/adb/stepsystem/data/step-system.sqlite
+          Logs: /data/adb/stepsystem/logs/service.log
+          EOF
           cd "$NAME"
           zip -qr "../dist/${NAME}.zip" .
 
