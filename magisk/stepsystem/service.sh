@@ -16,17 +16,28 @@ log(){
   line="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
   echo "$line" >> "$LOG"
   echo "$line" >> "$SDLOG" 2>/dev/null || true
-  echo "$line"
+  echo "$line" >&2
 }
 
 find_php(){
+  log "php dir: $(ls -la "$MODDIR/php" 2>&1 | tr '
+' '; ')"
+  log "php bin dir: $(ls -la "$MODDIR/php/bin" 2>&1 | tr '
+' '; ')"
   for p in \
     "$MODDIR/php/bin/php" \
     "$MODDIR/php/php" \
     /data/data/com.termux/files/usr/bin/php \
     /system/bin/php \
     /system/xbin/php; do
-    [ -x "$p" ] && echo "$p" && return 0
+    if [ -f "$p" ]; then
+      chmod 755 "$p" 2>/dev/null || true
+      if [ -x "$p" ]; then
+        echo "$p"
+        return 0
+      fi
+      log "WARN: php candidate exists but is not executable: $p"
+    fi
   done
   return 1
 }
