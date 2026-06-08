@@ -307,6 +307,7 @@ jobs:
           npm install --prefix "$NAME/web" got@11 tough-cookie iconv-lite global-agent hpagent
           MODULE_DIR="$NAME" python3 tools/build-magisk-runtime.py
           test -x "$NAME/php/bin/php"
+          test -x "$NAME/php/bin/node"
           test -f "$NAME/php/lib/php.ini"
           sed -i "s/^version=.*/version=${VERSION}/" "$NAME/module.prop"
           sed -i "s#http://127.0.0.1:8058/#http://127.0.0.1:8058/#" "$NAME/module.prop"

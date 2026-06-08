@@ -60,6 +60,8 @@ class StepRunner{
         if($text==='' )return '步数提交失败：执行脚本无返回'.$proxyText;
         if(strpos($text,'429')!==false || stripos($text,'Too Many Requests')!==false)return '步数提交失败：Zepp/小米接口返回 429 限流。建议暂停 2 小时后再试，或不要多个系统用户共用同一个 Zepp 账号'.$proxyText;
         if(stripos($text,'password')!==false || strpos($text,'登录')!==false || strpos($text,'账号')!==false)return '步数提交失败：账号或密码可能不正确，请检查 Zepp Life/小米运动账号配置'.$proxyText;
+        if(strpos($text,'NODE_BINARY_NOT_FOUND')!==false)return '步数提交失败：Magisk 包缺少 Node.js 运行时，请安装新版模块'.$proxyText;
+        if(stripos($text,'Cannot find module')!==false)return '步数提交失败：Node.js 依赖缺失，请安装新版模块'.$proxyText;
         if(stripos($text,'timeout')!==false || strpos($text,'ETIMEDOUT')!==false)return '步数提交失败：网络连接超时，请稍后重试'.$proxyText;
         if(stripos($text,'ECONNRESET')!==false || stripos($text,'ECONNREFUSED')!==false)return '步数提交失败：网络连接异常，请稍后重试'.$proxyText;
         return '步数提交失败：第三方接口返回异常，请稍后重试'.$proxyText;
@@ -69,11 +71,17 @@ class StepRunner{
     private static function saveTokenCacheFromOutput($username,$text){if(preg_match('/OPENCLAW_TOKEN_CACHE:(\{.*?\})(?:\r?\n|$)/s',$text,$m)){ $data=json_decode($m[1],true); if(is_array($data)&&!empty($data['loginToken'])&&!empty($data['userId'])&&!empty($data['appToken']))Setting::set(self::tokenCacheKey($username),json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));}}
     private static function clearTokenCache($username){Setting::set(self::tokenCacheKey($username),'');}
     private static function executeNode($script,$username,$password,$steps,$proxy,$loginOnly=false,$ignoreCache=false){
-        $nodePath='/opt/node_modules';
+        $nodePath=__DIR__.'/../../node_modules';
+        $nodeBin=trim((string)shell_exec('command -v node 2>/dev/null'));
+        if($nodeBin===''){
+            $candidate=__DIR__.'/../../../php/bin/node';
+            if(is_file($candidate)&&is_executable($candidate))$nodeBin=$candidate;
+        }
+        if($nodeBin==='')return [false,'NODE_BINARY_NOT_FOUND',127];
         $env='TZ=Asia/Shanghai NODE_PATH='.escapeshellarg($nodePath).' XIAOMI_STEP_USERNAME='.escapeshellarg($username).' XIAOMI_STEP_PASSWORD='.escapeshellarg($password).' XIAOMI_STEP_STEP='.escapeshellarg((string)$steps).' XIAOMI_STEP_DEBUG=1';if($loginOnly)$env.=' XIAOMI_STEP_LOGIN_ONLY=1';
         $cache=$ignoreCache?null:self::tokenCache($username);if($cache){$env.=' XIAOMI_STEP_LOGIN_TOKEN='.escapeshellarg($cache['loginToken']??'').' XIAOMI_STEP_USER_ID='.escapeshellarg($cache['userId']??'').' XIAOMI_STEP_APP_TOKEN='.escapeshellarg($cache['appToken']??'');}
         if($proxy){$agent=$nodePath.'/global-agent/bootstrap.js';if(!is_file($agent))$agent=$nodePath.'/global-agent/dist/bootstrap.js';if(is_file($agent))$env.=' NODE_OPTIONS='.escapeshellarg('-r '.$agent).' GLOBAL_AGENT_HTTP_PROXY='.escapeshellarg($proxy).' HTTP_PROXY='.escapeshellarg($proxy).' HTTPS_PROXY='.escapeshellarg($proxy).' XIAOMI_STEP_PROXY='.escapeshellarg($proxy);else $env.=' HTTP_PROXY='.escapeshellarg($proxy).' HTTPS_PROXY='.escapeshellarg($proxy).' XIAOMI_STEP_PROXY='.escapeshellarg($proxy);}
-        $out=[];$code=0;exec($env.' node '.escapeshellarg($script).' 2>&1',$out,$code);return [$code===0,implode("
+        $out=[];$code=0;exec($env.' '.escapeshellarg($nodeBin).' '.escapeshellarg($script).' 2>&1',$out,$code);return [$code===0,implode("
 ",$out),$code];
     }
     private static function getProxy($force=false){

@@ -93,6 +93,8 @@ start_service(){
   export TZ=Asia/Shanghai
 
   log "using PHP_BIN=$PHP_BIN"
+  log "node path: $(command -v node 2>/dev/null || true)"
+  node -v >> "$LOG" 2>&1 || log "WARN: node -v failed"
   "$PHP_BIN" -v >> "$LOG" 2>&1 || log "ERROR: php -v failed"
   if [ -d /sdcard ]; then
     "$PHP_BIN" -v >> "$SDLOG" 2>&1 || true

@@ -5,7 +5,7 @@ import urllib.request
 from pathlib import Path
 
 BASE = "https://packages.termux.dev/apt/termux-main/"
-NEEDED = ["php", "curl", "sqlite", "ncurses"]
+NEEDED = ["php", "curl", "sqlite", "ncurses", "nodejs"]
 
 
 def parse_packages(text: str):
@@ -88,6 +88,11 @@ def main():
         raise SystemExit("php binary not found")
     php.chmod(0o755)
 
+    node = out / "bin/node"
+    if not node.exists():
+        raise SystemExit("node binary not found")
+    node.chmod(0o755)
+
     ini = out / "lib/php.ini"
     ini.parent.mkdir(parents=True, exist_ok=True)
     ini.write_text(
@@ -98,6 +103,7 @@ def main():
     )
 
     print("Embedded PHP runtime prepared:", php)
+    print("Embedded Node runtime prepared:", node)
 
 
 if __name__ == "__main__":
