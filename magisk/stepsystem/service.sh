@@ -13,6 +13,7 @@ PIDFILE=$RUNDIR/php.pid
 log(){ echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
 find_php(){
   for p in \
+    "$MODDIR/php/bin/php" \
     "$MODDIR/php/php" \
     /data/data/com.termux/files/usr/bin/php \
     /system/bin/php \

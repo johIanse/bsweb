@@ -1,6 +1,6 @@
 id=stepsystem
-name=Step System Portable Server
+name=步数系统 8058 本地服务
 version=v1.0.0
 versionCode=100
 modifier=johIanse
-description=Run Step System locally on Android via Magisk. Includes Android arm64 PHP runtime and starts a PHP+SQLite web service at http://127.0.0.1:8058/.
+description=步数系统 Magisk 本地服务模块，内置 Android arm64 PHP 运行时，启动地址 http://127.0.0.1:8058/，默认后台 admin/admin。
