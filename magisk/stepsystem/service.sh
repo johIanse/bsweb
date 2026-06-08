@@ -10,12 +10,14 @@ WEB=$MODDIR/web
 LOGDIR=$BASE/logs
 RUNDIR=$BASE/run
 DATADIR=$BASE/data
+TMPDIR_STEP=$BASE/tmp
+SESSIONDIR=$BASE/sessions
 PORT=${STEP_SYSTEM_PORT:-8058}
 LOG=$LOGDIR/service.log
 PIDFILE=$RUNDIR/php.pid
 SDLOG=/sdcard/步数管理-service.log
 
-mkdir -p "$LOGDIR" "$RUNDIR" "$DATADIR" "$WEB/storage"
+mkdir -p "$LOGDIR" "$RUNDIR" "$DATADIR" "$TMPDIR_STEP" "$SESSIONDIR" "$WEB/storage"
 
 log(){
   line="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
@@ -83,6 +85,9 @@ start_service(){
   export DB_DRIVER=sqlite
   export DB_PATH="$DATADIR/step-system.sqlite"
   export NODE_PATH="$WEB/node_modules"
+  export TMPDIR="$TMPDIR_STEP"
+  export TEMP="$TMPDIR_STEP"
+  export TMP="$TMPDIR_STEP"
   export TZ=Asia/Shanghai
 
   log "using PHP_BIN=$PHP_BIN"
@@ -94,6 +99,28 @@ start_service(){
     return 1
   fi
 
+
+init_default_admin(){
+  log "checking default admin and sqlite database"
+  cd "$WEB" || { log "ERROR: cd $WEB failed before init"; return 1; }
+  "$PHP_BIN"     -d sys_temp_dir="$TMPDIR_STEP"     -d session.save_path="$SESSIONDIR"     -d opcache.enable_cli=0     -r '
+require "config/bootstrap.php";
+require "app/Core/Database.php";
+use StepSystem\Core\Database;
+$p = Database::pdo();
+$count = (int)$p->query("SELECT COUNT(*) FROM users WHERE role=".$p->quote("admin"))->fetchColumn();
+if ($count === 0) {
+  $p->prepare("INSERT INTO users(username,password,role,status,expires_at,created_at) VALUES(?,?,?,?,?,?)")
+    ->execute(["admin", password_hash("admin", PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
+  echo "DEFAULT_ADMIN_CREATED\n";
+} else {
+  echo "ADMIN_EXISTS\n";
+}
+' >> "$LOG" 2>&1 || log "WARN: default admin/sqlite init failed"
+}
+
+  init_default_admin
+
   if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
     log "already running pid=$(cat "$PIDFILE")"
   else
@@ -101,7 +128,7 @@ start_service(){
     SERVER_LOG="$LOGDIR/php-server.log"
     log "starting PHP built-in server on 127.0.0.1:$PORT"
     log "server cwd=$(pwd) docroot=$WEB/public server_log=$SERVER_LOG"
-    nohup "$PHP_BIN" -d variables_order=EGPCS -S "127.0.0.1:$PORT" -t "$WEB/public" >> "$SERVER_LOG" 2>&1 &
+    nohup "$PHP_BIN"       -d variables_order=EGPCS       -d sys_temp_dir="$TMPDIR_STEP"       -d session.save_path="$SESSIONDIR"       -d opcache.enable_cli=0       -S "127.0.0.1:$PORT" -t "$WEB/public" >> "$SERVER_LOG" 2>&1 &
     echo $! > "$PIDFILE"
     sleep 3
   fi
@@ -113,7 +140,7 @@ start_service(){
     log "php server log tail: $(tail -40 "$LOGDIR/php-server.log" 2>&1 | tr '
 ' '; ')"
     log "retrying on 0.0.0.0:$PORT"
-    nohup "$PHP_BIN" -d variables_order=EGPCS -S "0.0.0.0:$PORT" -t "$WEB/public" >> "$LOGDIR/php-server.log" 2>&1 &
+    nohup "$PHP_BIN"       -d variables_order=EGPCS       -d sys_temp_dir="$TMPDIR_STEP"       -d session.save_path="$SESSIONDIR"       -d opcache.enable_cli=0       -S "0.0.0.0:$PORT" -t "$WEB/public" >> "$LOGDIR/php-server.log" 2>&1 &
     echo $! > "$PIDFILE"
     sleep 3
     if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
