@@ -20,7 +20,11 @@ class Database{
         return ['driver'=>'mysql','host'=>getenv('DB_HOST')?:'step-mysql','name'=>getenv('DB_NAME')?:'step_system','user'=>getenv('DB_USER')?:'step_user','pass'=>(string)(getenv('DB_PASS')?:'')];
     }
     public static function config(){
-        $c=self::installed()?require self::configFile():self::envConfig();
+        if(is_file(self::configFile())){
+            $c=require self::configFile();
+        }else{
+            $c=self::envConfig();
+        }
         if(!isset($c['driver']))$c['driver']=isset($c['path'])?'sqlite':'mysql';
         return $c;
     }

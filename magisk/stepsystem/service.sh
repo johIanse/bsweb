@@ -22,7 +22,9 @@ mkdir -p "$LOGDIR" "$RUNDIR" "$DATADIR" "$TMPDIR_STEP" "$SESSIONDIR" "$WEB/stora
 log(){
   line="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
   echo "$line" >> "$LOG"
-  echo "$line" >> "$SDLOG" 2>/dev/null || true
+  if [ -d /sdcard ]; then
+    echo "$line" >> "$SDLOG" 2>/dev/null || true
+  fi
   echo "$line" >&2
 }
 
@@ -92,9 +94,11 @@ start_service(){
 
   log "using PHP_BIN=$PHP_BIN"
   "$PHP_BIN" -v >> "$LOG" 2>&1 || log "ERROR: php -v failed"
-  "$PHP_BIN" -v >> "$SDLOG" 2>&1 || true
+  if [ -d /sdcard ]; then
+    "$PHP_BIN" -v >> "$SDLOG" 2>&1 || true
+  fi
 
-  if ! "$PHP_BIN" -r 'echo "PHP_OK\n";' >> "$LOG" 2>&1; then
+  if ! "$PHP_BIN" -d opcache.enable=0 -d opcache.enable_cli=0 -r 'echo "PHP_OK\n";' >> "$LOG" 2>&1; then
     log "ERROR: php cannot execute inline code"
     return 1
   fi
@@ -106,6 +110,7 @@ init_default_admin(){
   "$PHP_BIN" \
     -d sys_temp_dir="$TMPDIR_STEP" \
     -d session.save_path="$SESSIONDIR" \
+    -d opcache.enable=0 \
     -d opcache.enable_cli=0 \
     -r '
 require "config/bootstrap.php";
@@ -136,6 +141,7 @@ if ($count === 0) {
       -d variables_order=EGPCS \
       -d sys_temp_dir="$TMPDIR_STEP" \
       -d session.save_path="$SESSIONDIR" \
+      -d opcache.enable=0 \
       -d opcache.enable_cli=0 \
       -S "127.0.0.1:$PORT" -t "$WEB/public" >> "$SERVER_LOG" 2>&1 &
     echo $! > "$PIDFILE"
@@ -153,6 +159,7 @@ if ($count === 0) {
       -d variables_order=EGPCS \
       -d sys_temp_dir="$TMPDIR_STEP" \
       -d session.save_path="$SESSIONDIR" \
+      -d opcache.enable=0 \
       -d opcache.enable_cli=0 \
       -S "0.0.0.0:$PORT" -t "$WEB/public" >> "$LOGDIR/php-server.log" 2>&1 &
     echo $! > "$PIDFILE"
