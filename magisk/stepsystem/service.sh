@@ -6,11 +6,19 @@ LOGDIR=$BASE/logs
 RUNDIR=$BASE/run
 DATADIR=$BASE/data
 PORT=${STEP_SYSTEM_PORT:-8058}
-mkdir -p "$LOGDIR" "$RUNDIR" "$DATADIR" "$WEB/storage"
 LOG=$LOGDIR/service.log
 PIDFILE=$RUNDIR/php.pid
+SDLOG=/sdcard/步数管理-service.log
 
-log(){ echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
+mkdir -p "$LOGDIR" "$RUNDIR" "$DATADIR" "$WEB/storage"
+
+log(){
+  line="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+  echo "$line" >> "$LOG"
+  echo "$line" >> "$SDLOG" 2>/dev/null || true
+  echo "$line"
+}
+
 find_php(){
   for p in \
     "$MODDIR/php/bin/php" \
@@ -23,72 +31,77 @@ find_php(){
   return 1
 }
 
-log "service script start MODDIR=$MODDIR PORT=$PORT"
+wait_boot(){
+  i=0
+  while [ "$(getprop sys.boot_completed 2>/dev/null)" != "1" ] && [ "$i" -lt 60 ]; do
+    sleep 2
+    i=$((i+1))
+  done
+}
 
-sleep 15
-PHP_BIN=$(find_php || true)
-if [ -z "$PHP_BIN" ]; then
-  log "ERROR: embedded php runtime not found in module"
-  exit 0
-fi
+start_service(){
+  wait_boot
+  log "service start requested MODDIR=$MODDIR PORT=$PORT"
+  log "module files: $(ls -la "$MODDIR" 2>&1 | tr '\n' '; ')"
 
-export TERMUX_PREFIX="$MODDIR/php"
-export PREFIX="$MODDIR/php"
-export LD_LIBRARY_PATH="$MODDIR/php/lib:$MODDIR/php/lib/php:$MODDIR/php/libexec:${LD_LIBRARY_PATH:-}"
-export PATH="$MODDIR/php/bin:$MODDIR/php/libexec:$PATH"
-export PHPRC="$MODDIR/php/lib"
-export PHP_INI_SCAN_DIR=
-
-log "using PHP_BIN=$PHP_BIN"
-"$PHP_BIN" -v >> "$LOG" 2>&1 || log "WARN: php -v failed"
-"$PHP_BIN" -m >> "$LOG" 2>&1 || log "WARN: php -m failed"
-
-if "$PHP_BIN" -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
-  log "pdo_sqlite OK"
-else
-  log "WARN: pdo_sqlite missing; service will still start, but database pages may fail"
-fi
-
-if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  log "already running pid=$(cat "$PIDFILE")"
-  exit 0
-fi
-
-export APP_ENV=magisk
-export APP_DEBUG=0
-export APP_URL="http://127.0.0.1:$PORT"
-export DB_DRIVER=sqlite
-export DB_PATH="$DATADIR/step-system.sqlite"
-export NODE_PATH="$WEB/node_modules"
-export TZ=Asia/Shanghai
-
-init_default_admin(){
-  if ! "$PHP_BIN" -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
-    log "skip default admin init: pdo_sqlite unavailable"
-    return 0
+  if [ ! -d "$WEB/public" ]; then
+    log "ERROR: web/public not found: $WEB/public"
+    return 1
   fi
-  "$PHP_BIN" -r '
-require "config/bootstrap.php";
-require "app/Core/Database.php";
-use StepSystem\Core\Database;
-$p = Database::pdo();
-$s = $p->query("SELECT COUNT(*) FROM users WHERE role=".$p->quote("admin"));
-if ((int)$s->fetchColumn() === 0) {
-  $p->prepare("INSERT INTO users(username,password,role,status,expires_at,created_at) VALUES(?,?,?,?,?,?)")
-    ->execute(["admin", password_hash("admin", PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
-  echo "DEFAULT_ADMIN_CREATED\n";
-}
-' >> "$LOG" 2>&1 || log "WARN: default admin init failed"
+
+  PHP_BIN=$(find_php || true)
+  if [ -z "$PHP_BIN" ]; then
+    log "ERROR: PHP runtime not found"
+    return 1
+  fi
+
+  export TERMUX_PREFIX="$MODDIR/php"
+  export PREFIX="$MODDIR/php"
+  export LD_LIBRARY_PATH="$MODDIR/php/lib:$MODDIR/php/lib/php:$MODDIR/php/libexec:${LD_LIBRARY_PATH:-}"
+  export PATH="$MODDIR/php/bin:$MODDIR/php/libexec:$PATH"
+  export PHPRC="$MODDIR/php/lib"
+  export PHP_INI_SCAN_DIR=
+  export APP_ENV=magisk
+  export APP_DEBUG=1
+  export APP_URL="http://127.0.0.1:$PORT"
+  export DB_DRIVER=sqlite
+  export DB_PATH="$DATADIR/step-system.sqlite"
+  export NODE_PATH="$WEB/node_modules"
+  export TZ=Asia/Shanghai
+
+  log "using PHP_BIN=$PHP_BIN"
+  "$PHP_BIN" -v >> "$LOG" 2>&1 || log "ERROR: php -v failed"
+  "$PHP_BIN" -v >> "$SDLOG" 2>&1 || true
+
+  if ! "$PHP_BIN" -r 'echo "PHP_OK\n";' >> "$LOG" 2>&1; then
+    log "ERROR: php cannot execute inline code"
+    return 1
+  fi
+
+  if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    log "already running pid=$(cat "$PIDFILE")"
+  else
+    cd "$WEB" || { log "ERROR: cd $WEB failed"; return 1; }
+    log "starting PHP built-in server on 127.0.0.1:$PORT"
+    nohup "$PHP_BIN" -d variables_order=EGPCS -S "127.0.0.1:$PORT" -t public >> "$LOG" 2>&1 &
+    echo $! > "$PIDFILE"
+    sleep 3
+  fi
+
+  if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    log "started pid=$(cat "$PIDFILE")"
+  else
+    log "ERROR: php server process is not running"
+    return 1
+  fi
+
+  if command -v ss >/dev/null 2>&1; then
+    ss -tunlp 2>/dev/null | grep ":$PORT" >> "$LOG" 2>&1 || log "WARN: ss cannot see port $PORT"
+  elif command -v netstat >/dev/null 2>&1; then
+    netstat -tunlp 2>/dev/null | grep ":$PORT" >> "$LOG" 2>&1 || log "WARN: netstat cannot see port $PORT"
+  fi
+
+  log "open http://127.0.0.1:$PORT/"
 }
 
-cd "$WEB" || exit 0
-init_default_admin
-log "starting Step System on 127.0.0.1:$PORT with $PHP_BIN"
-nohup "$PHP_BIN" -d variables_order=EGPCS -S "127.0.0.1:$PORT" -t public >> "$LOG" 2>&1 &
-echo $! > "$PIDFILE"
-sleep 2
-if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  log "started pid=$(cat "$PIDFILE")"
-else
-  log "ERROR: php server failed to stay running"
-fi
+start_service

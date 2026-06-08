@@ -313,10 +313,12 @@ jobs:
           cat >> "$NAME/README.txt" <<EOF
           Step System Magisk module
 
+          Name: 步数管理
           URL: http://127.0.0.1:8058/
           Default admin: admin / admin
           Data: /data/adb/stepsystem/data/step-system.sqlite
-          Logs: /data/adb/stepsystem/logs/service.log
+          Service log: /sdcard/步数管理-service.log
+          Action diagnostic log: /sdcard/步数管理-action.log
           EOF
           cd "$NAME"
           zip -qr "../dist/${NAME}.zip" .
