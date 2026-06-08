@@ -16,3 +16,12 @@ set_perm "$MODPATH/uninstall.sh" 0 0 0755
 set_perm_recursive "$MODPATH/php/bin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/php/libexec" 0 0 0755 0755
 set_perm_recursive "$MODPATH/php/lib" 0 0 0755 0644
+
+# Try to start once right after installation as a convenience.
+# Boot-time service.sh and post-fs-data.sh remain the durable startup paths.
+mkdir -p /data/adb/stepsystem/logs
+(
+  sleep 3
+  sh "$MODPATH/service.sh"
+) >> /data/adb/stepsystem/logs/service.log 2>&1 &
+ui_print "已安排后台启动，稍后打开: http://127.0.0.1:8058/"
