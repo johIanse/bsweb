@@ -319,6 +319,7 @@ jobs:
           Default admin: admin / admin
           Data: /data/adb/stepsystem/data/step-system.sqlite
           Service log: /sdcard/步数管理-service.log
+          Scheduler log: /data/adb/stepsystem/logs/scheduler.log
           Action diagnostic log: /sdcard/步数管理-action.log
           EOF
           cd "$NAME"

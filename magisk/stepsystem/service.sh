@@ -182,6 +182,12 @@ if ($count === 0) {
     netstat -tunlp 2>/dev/null | grep ":$PORT" >> "$LOG" 2>&1 || log "WARN: netstat cannot see port $PORT"
   fi
 
+  if [ -x "$MODDIR/scheduler-daemon.sh" ]; then
+    sh "$MODDIR/scheduler-daemon.sh" >> "$LOGDIR/service.log" 2>&1 || log "WARN: scheduler daemon start failed"
+  else
+    log "WARN: scheduler-daemon.sh not found or not executable"
+  fi
+
   log "open http://127.0.0.1:$PORT/"
 }
 

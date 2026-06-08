@@ -12,6 +12,7 @@ ui_print "服务日志: /sdcard/步数管理-service.log"
 set_perm "$MODPATH/service.sh" 0 0 0755
 set_perm "$MODPATH/action.sh" 0 0 0755
 set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
+set_perm "$MODPATH/scheduler-daemon.sh" 0 0 0755
 set_perm "$MODPATH/uninstall.sh" 0 0 0755
 set_perm_recursive "$MODPATH/php/bin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/php/libexec" 0 0 0755 0755

@@ -16,7 +16,7 @@ LOG=/sdcard/步数管理-action.log
   sh "$MODDIR/service.sh" 2>&1
   echo
   echo "process:"
-  ps -A 2>/dev/null | grep -E 'php|stepsystem' || true
+  ps -A 2>/dev/null | grep -E 'php|stepsystem|scheduler-daemon' || true
   echo
   echo "port 8058:"
   (ss -tunlp 2>/dev/null || netstat -tunlp 2>/dev/null) | grep 8058 || true
@@ -26,6 +26,12 @@ LOG=/sdcard/步数管理-action.log
   echo
   echo "php server log:"
   tail -160 /data/adb/stepsystem/logs/php-server.log 2>&1
+  echo
+  echo "scheduler log:"
+  tail -160 /data/adb/stepsystem/logs/scheduler.log 2>&1
+  echo
+  echo "post-fs-data log:"
+  tail -80 /data/adb/stepsystem/logs/post-fs-data.log 2>&1
 } | tee "$LOG"
 echo "诊断日志已保存: $LOG"
 echo "服务日志也会复制到: /sdcard/步数管理-service.log"
