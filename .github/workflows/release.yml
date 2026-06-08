@@ -203,6 +203,18 @@ jobs:
 
           npm install --prefix $name got@11 tough-cookie iconv-lite global-agent hpagent
 
+          $nodePage = Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/latest-v20.x/"
+          $nodeZipName = [regex]::Match($nodePage.Content, 'node-v20\.[^"<>]+-win-x64\.zip').Value
+          if (-not $nodeZipName) { throw "No suitable Node.js Windows x64 release found" }
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/latest-v20.x/$nodeZipName" -OutFile "node.zip"
+          New-Item -ItemType Directory -Force -Path "$name\runtime\node-full" | Out-Null
+          Expand-Archive node.zip -DestinationPath "$name\runtime\node-full" -Force
+          $nodeDir = Get-ChildItem "$name\runtime\node-full" -Directory | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path "$name\runtime\node" | Out-Null
+          Copy-Item "$($nodeDir.FullName)\node.exe" "$name\runtime\node\node.exe" -Force
+          & "$name\runtime\node\node.exe" --version
+          Remove-Item "$name\runtime\node-full" -Recurse -Force
+
           $releaseJson = Invoke-RestMethod -Uri "https://windows.php.net/downloads/releases/releases.json"
           $phpEntry = $releaseJson.PSObject.Properties | Where-Object { $_.Name -like "8.3*" -or $_.Name -eq "8.3" } | Select-Object -First 1
           if (-not $phpEntry) { $phpEntry = $releaseJson.PSObject.Properties | Where-Object { $_.Name -like "8.*" } | Select-Object -First 1 }
@@ -235,8 +247,9 @@ jobs:
           - Runtime data is stored in data\step-system.sqlite
 
           Notes:
-          - This package includes PHP for Windows and Node dependencies.
+          - This package includes PHP for Windows, Node.js, and Node dependencies.
           - It runs a local web service at http://127.0.0.1:8088/
+          - It also starts scheduler.php every 60 seconds for timed runs and whitelist heartbeat.
           - Default admin login: admin / admin
           "@ | Set-Content -Encoding UTF8 "$name\RELEASE_INFO.txt"
 

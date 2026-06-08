@@ -54,6 +54,7 @@ const ObjectKeys2LowerCase = (obj) => Object.fromEntries(Object.entries(obj).map
 // ----------------------------------------
 const is_debug = $.isTrue($.isNode() ? process.env.XIAOMI_STEP_DEBUG : $.getdata('xiaomi_step_debug')) // 是否调试状态
 const login_only = $.isTrue($.isNode() ? process.env.XIAOMI_STEP_LOGIN_ONLY : $.getdata('xiaomi_step_login_only')) // 仅验证登录，不提交步数
+const cache_only = $.isTrue($.isNode() ? process.env.XIAOMI_STEP_CACHE_ONLY : $.getdata('xiaomi_step_cache_only')) // 仅检测缓存，不重新登录
 // 配置参数
 const enable_increment_mode = $.isTrue($.isNode() ? process.env.XIAOMI_STEP_INCREMENT_MODE : $.getdata('xiaomi_step_increment_mode')) // 是否开启增量模式
 const run_count = $.isNode() ? process.env.XIAOMI_STEP_RUN_COUNT : $.getdata('xiaomi_step_run_count') || 1 // 运行次数 => 这里需要配合cron进行使用|cron运行几次，填几次
@@ -161,6 +162,9 @@ const logger = createLogger(is_debug)
                     cacheHit = false
                 }
             }
+            if (!cacheHit && cache_only) {
+                throw new Error('缓存登录参数失效')
+            }
             if (!cacheHit) {
                 var code = await xiaomi.getCode()
                 var login = await xiaomi.doLogin(code)
@@ -176,7 +180,7 @@ const logger = createLogger(is_debug)
             continue
         }
         $.message.push(`登陆账号: ${user}`)
-        $.message.push(`当前模式: ${login_only ? '登录验证' : (enable_increment_mode ? '递增' : '常规')}`)
+        $.message.push(`当前模式: ${cache_only ? '缓存检测' : (login_only ? '登录验证' : (enable_increment_mode ? '递增' : '常规'))}`)
         useSpace && $.message.push(`设置区间: ${spaceArr.length > 1 ? spaceArr[i] : space}`)
         $.message.push(`运行时间: ${startTime}`)
         if (enable_increment_mode) {
