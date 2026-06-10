@@ -18,6 +18,8 @@ services:
       DB_PASS: ${MYSQL_ROOT_PASSWORD:-}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}
       STEP_PROXY_API_URL: ${STEP_PROXY_API_URL:-}
+      APP_URL: ${APP_URL:-}
+      STEP_PUBLIC_URL: ${STEP_PUBLIC_URL:-}
       INSTALL_TOKEN: ${INSTALL_TOKEN:-change-me-install-token}
       APP_DEBUG: ${APP_DEBUG:-0}
       TZ: Asia/Shanghai

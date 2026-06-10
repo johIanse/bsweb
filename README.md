@@ -106,6 +106,40 @@ sudo bash install.sh --reset-admin
 
 按提示输入管理员账号和密码即可。
 
+## 固定站点地址 / 授权回调地址
+
+授权登录里的 `/yh` 回调地址默认会按当前访问域名自动生成。比如你用：
+
+```text
+http://example.com:8088
+```
+
+打开后台时，系统会显示：
+
+```text
+http://example.com:8088/yh
+```
+
+如果你不想自动识别，可以在项目 `.env` 里固定站点地址：
+
+```env
+APP_URL=http://你的域名或IP:8088
+```
+
+然后重启容器：
+
+```bash
+docker compose -p step-single -f docker-compose.single.yml restart
+```
+
+也可以使用兼容变量：
+
+```env
+STEP_PUBLIC_URL=http://你的域名或IP:8088
+```
+
+优先级：`APP_URL` > `STEP_PUBLIC_URL` > 当前访问域名自动识别。
+
 ## GitHub 自动构建发布包
 
 仓库已配置 GitHub Actions：

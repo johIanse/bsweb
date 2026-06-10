@@ -12,7 +12,9 @@ services:
       DB_NAME: step_system
       DB_USER: root
       DB_PASS: ${MYSQL_ROOT_PASSWORD:-}
-      STEP_PROXY_API_URL: "http://api.xiequ.cn/VAD/GetIp.aspx?act=get&uid=155084&vkey=278854F2E0E3EFF55DB6B8D0DDE5D46B&num=1&time=30&plat=0&re=1&type=0&so=1&ow=1&spl=1&addr=&db=1"
+      STEP_PROXY_API_URL: ${STEP_PROXY_API_URL:-}
+      APP_URL: ${APP_URL:-}
+      STEP_PUBLIC_URL: ${STEP_PUBLIC_URL:-}
       INSTALL_TOKEN: ${INSTALL_TOKEN:-change-me-install-token}
       APP_DEBUG: ${APP_DEBUG:-0}
     depends_on:
