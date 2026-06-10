@@ -90,7 +90,7 @@ sudo bash install.sh --reset-admin
 
 注意：Windows 可运行 exe 是 Docker 启动器，不是把 PHP/MariaDB 编译成单个桌面程序。使用前需要先安装并启动 Docker Desktop。双击 `Start-StepSystem.exe` 会自动启动单容器版并打开浏览器。
 
-### Windows 真单机版 EXE
+### Windows
 
 GitHub Actions 会生成不依赖 Docker 的 Windows 单机版：
 
