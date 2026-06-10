@@ -20,6 +20,7 @@ DEFAULT_INSTALL_DIR="/www/wwwroot/step-system"
 DEFAULT_DB_NAME="step_system"
 DEFAULT_DB_USER="step_user"
 DEFAULT_ADMIN_USER="admin"
+DEFAULT_ADMIN_PASS="admin"
 DEFAULT_PHP_EXTS=(pdo pdo_mysql mysqli curl mbstring openssl json fileinfo session iconv)
 NODE_PACKAGES=(got@11 tough-cookie iconv-lite global-agent hpagent)
 
@@ -291,7 +292,7 @@ prompt_init_admin(){
   else
     confirm "是否直接初始化/重置后台管理员？这样可跳过网页安装" "Y" || return 0
     admin_user="$(ask "管理员账号" "$DEFAULT_ADMIN_USER")"
-    read -r -s -p "管理员密码：" admin_pass || true; echo
+    admin_pass="$(ask "管理员密码" "$DEFAULT_ADMIN_PASS")"
   fi
   init_admin_docker_with_values "$root_pass" "$admin_user" "$admin_pass"
 }
@@ -333,7 +334,7 @@ prompt_init_admin_single(){
   else
     confirm "是否直接初始化/重置后台管理员？这样可跳过网页安装" "Y" || return 0
     admin_user="$(ask "管理员账号" "$DEFAULT_ADMIN_USER")"
-    read -r -s -p "管理员密码：" admin_pass || true; echo
+    admin_pass="$(ask "管理员密码" "$DEFAULT_ADMIN_PASS")"
   fi
   init_admin_single_with_values "$admin_user" "$admin_pass"
 }
@@ -495,7 +496,7 @@ reset_admin_command(){
   admin_user="${2:-}"
   admin_pass="${3:-}"
   [[ -z "$admin_user" ]] && admin_user="$(ask "管理员账号" "$DEFAULT_ADMIN_USER")"
-  if [[ -z "$admin_pass" ]]; then read -r -s -p "管理员密码：" admin_pass || true; echo; fi
+  if [[ -z "$admin_pass" ]]; then admin_pass="$(ask "管理员密码" "$DEFAULT_ADMIN_PASS")"; fi
   init_admin_docker_with_values "$root_pass" "$admin_user" "$admin_pass"
   success "请打开站点首页使用管理员账号登录"
 }

@@ -29,6 +29,7 @@ try{
   case 'admin_edit':$x=User::find((int)($_GET['id']??0));if(!$x)redirect('index.php?r=admin');(new AdminController)->save($x);break;
   case 'admin_delete':(new AdminController)->delete();break;
   case 'admin_user_logs':(new AdminController)->logs();break;
+  case 'admin_username':(new AdminController)->adminUsername();break;
   case 'admin_register_settings':(new AdminController)->registerSettings();break;
   case 'admin_yh_oauth':(new AdminController)->yhOAuthSettings();break;
   case 'admin_proxy':(new AdminController)->proxy();break;
