@@ -1,10 +1,43 @@
 # 步数系统
 
-## 一键安装 / 一键修复
+## 安装 / 升级
 
-进入项目目录后执行：
+### 一键安装 / 升级
+
+复制下面命令到服务器执行即可，默认安装到 `/opt/step-system`，并启动 Docker 单容器版：
 
 ```bash
+sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh)
+```
+
+如果要指定安装目录：
+
+```bash
+sudo STEP_SYSTEM_DIR=/opt/step-system bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh)
+```
+
+常用参数：
+
+```bash
+# Docker 单容器安装/升级（默认）
+sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh) --single
+
+# Docker 双容器安装/修复
+sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh) --docker-repair
+
+# 重置后台管理员
+sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh) --reset-admin
+```
+
+一键脚本会自动下载 GitHub 最新源码；如果目标目录已存在，会先备份旧目录，并保留 `.env` 和 `config/database.php`。
+
+### 手动安装 / 升级
+
+如果不想使用在线脚本，也可以手动下载安装：
+
+```bash
+git clone https://github.com/johIanse/bsweb.git
+cd bsweb
 chmod +x install.sh
 sudo bash install.sh
 ```
