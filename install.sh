@@ -340,16 +340,28 @@ prompt_init_admin_single(){
 }
 
 wait_single_container(){
-  local i
+  local i status
   info "等待单容器站点就绪..."
-  for i in $(seq 1 90); do
+  for i in $(seq 1 180); do
+    status="$(docker inspect -f '{{.State.Status}}' "$SINGLE_SERVICE" 2>/dev/null || true)"
+    if [[ "$status" != "running" ]]; then
+      err "单容器已退出或未运行，当前状态：${status:-unknown}"
+      compose_single_cmd ps || true
+      compose_single_cmd logs --tail=120 "$SINGLE_SERVICE" || true
+      return 1
+    fi
+
     if docker exec "$SINGLE_SERVICE" php -r 'require "/var/www/html/config/bootstrap.php"; require "/var/www/html/app/Core/Database.php"; StepSystem\Core\Database::pdo(); echo "ok\n";' >/dev/null 2>&1; then
       success "单容器数据库/PHP 已就绪"
       return 0
     fi
     sleep 1
   done
-  err "单容器未在 90 秒内就绪，请查看日志：docker compose -p ${SINGLE_SLUG} -f docker-compose.single.yml logs -f"
+
+  err "单容器未在 180 秒内就绪，下面是最近日志和容器状态："
+  compose_single_cmd ps || true
+  compose_single_cmd logs --tail=160 "$SINGLE_SERVICE" || true
+  warn "可继续手动查看实时日志：docker compose -p ${SINGLE_SLUG} -f docker-compose.single.yml logs -f ${SINGLE_SERVICE}"
   return 1
 }
 

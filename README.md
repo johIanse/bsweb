@@ -83,6 +83,23 @@ docker compose -p step-single -f docker-compose.single.yml logs -f step-system-s
 docker compose -p step-single -f docker-compose.single.yml restart
 ```
 
+如果安装时提示：
+
+```text
+单容器未在 180 秒内就绪
+```
+
+请先看脚本自动打印的最近日志。也可以手动执行：
+
+```bash
+cd /opt/step-system
+docker compose -p step-single -f docker-compose.single.yml ps
+docker compose -p step-single -f docker-compose.single.yml logs --tail=200 step-system-single
+curl -I --max-time 5 http://127.0.0.1:8088/ || true
+```
+
+常见原因：容器启动失败、端口被占用、MariaDB 初始化慢、`.env` 权限异常或旧数据目录不兼容。
+
 ## 双容器模式
 
 双容器模式更标准：
