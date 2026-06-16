@@ -100,6 +100,22 @@ curl -I --max-time 5 http://127.0.0.1:8088/ || true
 
 常见原因：容器启动失败、端口被占用、MariaDB 初始化慢、`.env` 权限异常或旧数据目录不兼容。
 
+如果看到：
+
+```text
+open /opt/step-system/.env: permission denied
+```
+
+说明 Docker Compose 当前用户无法读取 `.env`。可先执行：
+
+```bash
+cd /opt/step-system
+sudo chown root:root .env
+sudo chmod 644 .env
+```
+
+新版安装脚本会在执行 compose 前自动修复 `.env` 权限。
+
 ## 双容器模式
 
 双容器模式更标准：

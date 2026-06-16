@@ -130,11 +130,20 @@ ensure_docker(){
   fi
 }
 
+fix_env_permissions(){
+  if [[ -f "$SCRIPT_DIR/.env" ]]; then
+    chown root:root "$SCRIPT_DIR/.env" 2>/dev/null || true
+    chmod 644 "$SCRIPT_DIR/.env" 2>/dev/null || true
+  fi
+}
+
 compose_cmd(){
+  fix_env_permissions
   if docker compose version >/dev/null 2>&1; then docker compose -p "$SERVICE_SLUG" "$@"; else docker-compose -p "$SERVICE_SLUG" "$@"; fi
 }
 
 compose_single_cmd(){
+  fix_env_permissions
   if docker compose version >/dev/null 2>&1; then docker compose -p "$SINGLE_SLUG" -f docker-compose.single.yml "$@"; else docker-compose -p "$SINGLE_SLUG" -f docker-compose.single.yml "$@"; fi
 }
 
@@ -180,7 +189,7 @@ MYSQL_ROOT_PASSWORD=${old_root}
 INSTALL_TOKEN=${old_token}
 STEP_PROXY_API_URL=${old_proxy}
 EOF_ENV
-  chmod 600 "$env_file" || true
+  chmod 644 "$env_file" || true
   success "已修复 .env（保留原 MySQL 密码和安装 token）"
 }
 
@@ -409,7 +418,7 @@ MYSQL_ROOT_PASSWORD=${root_pass}
 INSTALL_TOKEN=${token}
 STEP_PROXY_API_URL=${old_proxy}
 EOF_ENV
-  chmod 600 "$SCRIPT_DIR/.env" || true
+  chmod 644 "$SCRIPT_DIR/.env" || true
   backup_old_database_config
   sed -i -E "s/\"[0-9]+:80\"/\"${port}:80\"/" "$SCRIPT_DIR/docker-compose.single.yml"
 
