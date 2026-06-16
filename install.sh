@@ -348,28 +348,37 @@ prompt_init_admin_single(){
   init_admin_single_with_values "$admin_user" "$admin_pass"
 }
 
+print_single_debug_logs(){
+  compose_single_cmd ps || true
+  compose_single_cmd logs --tail=160 "$SINGLE_SERVICE" || true
+  docker logs --tail=160 "$SINGLE_SERVICE" 2>/dev/null || true
+}
+
 wait_single_container(){
   local i status
   info "等待单容器站点就绪..."
   for i in $(seq 1 180); do
     status="$(docker inspect -f '{{.State.Status}}' "$SINGLE_SERVICE" 2>/dev/null || true)"
-    if [[ "$status" != "running" ]]; then
+
+    if [[ "$status" == "running" ]]; then
+      if docker exec "$SINGLE_SERVICE" php -r 'require "/var/www/html/config/bootstrap.php"; require "/var/www/html/app/Core/Database.php"; StepSystem\Core\Database::pdo(); echo "ok\n";' >/dev/null 2>&1; then
+        success "单容器数据库/PHP 已就绪"
+        return 0
+      fi
+    elif [[ "$status" == "restarting" || "$status" == "created" ]]; then
+      # MariaDB/PHP 首次初始化或 entrypoint 重试时可能短暂 restarting，继续等待并在超时后打印日志。
+      :
+    else
       err "单容器已退出或未运行，当前状态：${status:-unknown}"
-      compose_single_cmd ps || true
-      compose_single_cmd logs --tail=120 "$SINGLE_SERVICE" || true
+      print_single_debug_logs
       return 1
     fi
 
-    if docker exec "$SINGLE_SERVICE" php -r 'require "/var/www/html/config/bootstrap.php"; require "/var/www/html/app/Core/Database.php"; StepSystem\Core\Database::pdo(); echo "ok\n";' >/dev/null 2>&1; then
-      success "单容器数据库/PHP 已就绪"
-      return 0
-    fi
     sleep 1
   done
 
   err "单容器未在 180 秒内就绪，下面是最近日志和容器状态："
-  compose_single_cmd ps || true
-  compose_single_cmd logs --tail=160 "$SINGLE_SERVICE" || true
+  print_single_debug_logs
   warn "可继续手动查看实时日志：docker compose -p ${SINGLE_SLUG} -f docker-compose.single.yml logs -f ${SINGLE_SERVICE}"
   return 1
 }
