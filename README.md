@@ -7,26 +7,26 @@
 复制下面命令到服务器执行即可，默认安装到 `/opt/step-system`，并启动 Docker 单容器版：
 
 ```bash
-sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh)
+curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash
 ```
 
 如果要指定安装目录：
 
 ```bash
-sudo STEP_SYSTEM_DIR=/opt/step-system bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh)
+curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo STEP_SYSTEM_DIR=/opt/step-system bash
 ```
 
 常用参数：
 
 ```bash
 # Docker 单容器安装/升级（默认）
-sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh) --single
+curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --single
 
 # Docker 双容器安装/修复
-sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh) --docker-repair
+curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --docker-repair
 
 # 重置后台管理员
-sudo bash <(curl -Ls https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh) --reset-admin
+curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --reset-admin
 ```
 
 一键脚本会自动下载 GitHub 最新源码；如果目标目录已存在，会先备份旧目录，并保留 `.env` 和 `config/database.php`。

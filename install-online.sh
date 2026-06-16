@@ -12,7 +12,7 @@ err(){ printf '\033[1;31m[ERR]\033[0m %s\n' "$*" >&2; }
 need_cmd(){ command -v "$1" >/dev/null 2>&1 || { err "缺少命令：$1"; exit 1; }; }
 
 if [[ "${EUID}" -ne 0 ]]; then
-  err "请用 root 执行，例如：sudo bash <(curl -Ls https://raw.githubusercontent.com/${REPO}/${REF}/install-online.sh)"
+  err "请用 root 执行，例如：curl -fsSL https://raw.githubusercontent.com/${REPO}/${REF}/install-online.sh | sudo bash"
   exit 1
 fi
 
