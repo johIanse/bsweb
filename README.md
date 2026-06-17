@@ -16,16 +16,29 @@ curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.
 curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo STEP_SYSTEM_DIR=/opt/step-system bash
 ```
 
-常用参数：
+常用参数可以按需要单独复制：
+
+#### Docker 单容器安装/升级（默认）
+
+适合新安装、升级，或想用最简单部署方式的情况。
 
 ```bash
-# Docker 单容器安装/升级（默认）
 curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --single
+```
 
-# Docker 双容器安装/修复
+#### Docker 双容器安装/修复
+
+适合使用 PHP 容器 + MySQL 容器的标准 Docker 部署，或需要修复双容器环境时使用。
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --docker-repair
+```
 
-# 重置后台管理员
+#### 重置后台管理员
+
+忘记后台账号或密码时使用，只重置后台管理员，不重装系统。
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --reset-admin
 ```
 
