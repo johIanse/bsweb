@@ -242,7 +242,7 @@ jobs:
 
           Usage:
           - Double-click StepSystem-Portable.exe
-          - Default admin login: admin / admin
+          - Default admin login: admin / admin123
           - No Docker required
           - Runtime data is stored in data\step-system.sqlite
 
@@ -250,7 +250,7 @@ jobs:
           - This package includes PHP for Windows, Node.js, and Node dependencies.
           - It runs a local web service at http://127.0.0.1:8088/
           - It also starts scheduler.php every 60 seconds for timed runs and whitelist heartbeat.
-          - Default admin login: admin / admin
+          - Default admin login: admin / admin123
           "@ | Set-Content -Encoding UTF8 "$name\RELEASE_INFO.txt"
 
           Install-Module ps2exe -Scope CurrentUser -Force
@@ -329,7 +329,7 @@ jobs:
 
           Name: 步数管理
           URL: http://127.0.0.1:8058/
-          Default admin: admin / admin
+          Default admin: admin / admin123
           Data: /data/adb/stepsystem/data/step-system.sqlite
           Service log: /sdcard/步数管理-service.log
           Scheduler log: /data/adb/stepsystem/logs/scheduler.log

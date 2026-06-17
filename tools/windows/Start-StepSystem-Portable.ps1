@@ -1,7 +1,7 @@
 param(
   [int]$Port = 8088,
   [string]$AdminUser = "admin",
-  [string]$AdminPass = "admin"
+  [string]$AdminPass = "admin123"
 )
 
 $ErrorActionPreference = "Stop"
@@ -123,7 +123,7 @@ if (-not $ok) {
 }
 
 Write-Host "启动成功：$url" -ForegroundColor Green
-Write-Host "默认管理员：admin / admin" -ForegroundColor Green
+Write-Host "默认管理员：admin / admin123" -ForegroundColor Green
 Write-Host "数据文件：$DbPath" -ForegroundColor Cyan
 Write-Host "定时日志：$schedulerLog" -ForegroundColor Cyan
 Start-Process $url

@@ -36,3 +36,4 @@ LOG=/sdcard/步数管理-action.log
 echo "诊断日志已保存: $LOG"
 echo "服务日志也会复制到: /sdcard/步数管理-service.log"
 echo "浏览器打开: http://127.0.0.1:8058/"
+echo "默认管理员: admin / admin123"

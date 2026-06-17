@@ -122,7 +122,7 @@ $p = Database::pdo();
 $count = (int)$p->query("SELECT COUNT(*) FROM users WHERE role=".$p->quote("admin"))->fetchColumn();
 if ($count === 0) {
   $p->prepare("INSERT INTO users(username,password,role,status,expires_at,created_at) VALUES(?,?,?,?,?,?)")
-    ->execute(["admin", password_hash("admin", PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
+    ->execute(["admin", password_hash("admin123", PASSWORD_DEFAULT), "admin", 1, null, date("Y-m-d H:i:s")]);
   echo "DEFAULT_ADMIN_CREATED\n";
 } else {
   echo "ADMIN_EXISTS\n";

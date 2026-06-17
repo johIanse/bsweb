@@ -239,7 +239,7 @@ http://127.0.0.1:8088/
 默认后台账号：
 
 ```text
-admin / admin
+admin / admin123
 ```
 
 数据保存在：
@@ -267,7 +267,7 @@ http://127.0.0.1:8058/
 默认后台账号：
 
 ```text
-admin / admin
+admin / admin123
 ```
 
 当前模块包内包含源码、Node 依赖和 Android arm64 PHP 运行时。

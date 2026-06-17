@@ -1,7 +1,7 @@
 param(
   [int]$Port = 8088,
-  [string]$AdminUser = "",
-  [string]$AdminPass = ""
+  [string]$AdminUser = "admin",
+  [string]$AdminPass = "admin123"
 )
 
 $ErrorActionPreference = "Stop"
@@ -110,6 +110,7 @@ echo "admin initialized: ".$u."\n";
 $url = "http://127.0.0.1:$Port/"
 Write-Host "" 
 Write-Host "启动成功：$url" -ForegroundColor Green
+Write-Host "默认管理员：admin / admin123" -ForegroundColor Green
 Write-Host "常用命令：" -ForegroundColor Cyan
 Write-Host "  docker compose -p step-single -f docker-compose.single.yml ps"
 Write-Host "  docker compose -p step-single -f docker-compose.single.yml logs -f step-system-single"
