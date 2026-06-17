@@ -205,7 +205,8 @@ return array (
   'pass' => '${root_pass}',
 );
 EOF_PHP
-  chmod 640 "$SCRIPT_DIR/config/database.php" || true
+  chmod 755 "$SCRIPT_DIR" "$SCRIPT_DIR/config" 2>/dev/null || true
+  chmod 644 "$SCRIPT_DIR/config/database.php" || true
   success "已写入 Docker 数据库配置 config/database.php"
 }
 
@@ -297,7 +298,11 @@ prompt_init_admin(){
   local root_pass="$1" admin_user admin_pass
   if [[ -n "$CLI_ADMIN_USER" || -n "$CLI_ADMIN_PASS" ]]; then
     admin_user="${CLI_ADMIN_USER:-$DEFAULT_ADMIN_USER}"
-    admin_pass="$CLI_ADMIN_PASS"
+    admin_pass="${CLI_ADMIN_PASS:-$DEFAULT_ADMIN_PASS}"
+  elif [[ ! -t 0 ]]; then
+    admin_user="$DEFAULT_ADMIN_USER"
+    admin_pass="$DEFAULT_ADMIN_PASS"
+    info "非交互安装模式：自动初始化/重置后台管理员为默认账号"
   else
     confirm "是否直接初始化/重置后台管理员？这样可跳过网页安装" "Y" || return 0
     admin_user="$(ask "管理员账号" "$DEFAULT_ADMIN_USER")"
@@ -463,6 +468,11 @@ print_docker_finish(){
   kv "数据库名" "$DEFAULT_DB_NAME"
   kv "数据库用户" "root"
   kv "数据库密码" "保存在 .env 的 MYSQL_ROOT_PASSWORD"
+  echo
+  echo "${BOLD}默认后台管理员：${NC}"
+  kv "账号" "$DEFAULT_ADMIN_USER"
+  kv "密码" "$DEFAULT_ADMIN_PASS"
+  echo "  如需修改：登录后进入账号与密码，或执行 --reset-admin。"
   echo
   echo "${BOLD}常用命令：${NC}"
   echo "  cd ${SCRIPT_DIR}"
