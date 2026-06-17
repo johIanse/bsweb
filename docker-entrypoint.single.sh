@@ -10,6 +10,12 @@ INSTALL_TOKEN="${INSTALL_TOKEN:-change-me-install-token}"
 mkdir -p /run/mysqld /var/lib/mysql /var/www/html/storage /var/www/html/config
 chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
+# Normalize permissions for bind-mounted app files. Some NAS/file-manager
+# deployments create config files/directories as root with restrictive modes,
+# which makes PHP fail with "Permission denied" when requiring config files.
+chmod 755 /var/www/html /var/www/html/config /var/www/html/storage 2>/dev/null || true
+[ -f /var/www/html/config/database.php ] && chmod 644 /var/www/html/config/database.php 2>/dev/null || true
+
 if [ ! -d /var/lib/mysql/mysql ]; then
   echo "[single] initializing MariaDB data directory"
   mariadb-install-db --user=mysql --datadir=/var/lib/mysql --skip-test-db >/dev/null
@@ -60,7 +66,7 @@ return array (
   'pass' => '${DB_PASS}',
 );
 PHP
-chmod 640 /var/www/html/config/database.php || true
+chmod 644 /var/www/html/config/database.php || true
 
 printenv > /etc/environment
 if [ -f /var/www/html/step-cron ]; then
