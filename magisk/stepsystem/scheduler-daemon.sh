@@ -15,6 +15,7 @@ PIDFILE=$BASE/run/scheduler.pid
 LOG=$LOGDIR/scheduler.log
 PHP_BIN=$MODDIR/php/bin/php
 mkdir -p "$LOGDIR" "$BASE/run" "$DATADIR" "$TMPDIR_STEP" "$SESSIONDIR" "$WEB/storage"
+chmod 755 "$BASE" "$LOGDIR" "$BASE/run" "$DATADIR" "$TMPDIR_STEP" "$SESSIONDIR" "$WEB/storage" 2>/dev/null || true
 
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] scheduler already running pid=$(cat "$PIDFILE")" >> "$LOG"

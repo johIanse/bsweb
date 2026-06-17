@@ -605,8 +605,17 @@ write_native_database_config(){
 <?php
 return array ('host'=>'${host}','name'=>'${name}','user'=>'${user}','pass'=>'${pass}');
 EOF_PHP
+  chmod 755 "$dst" "$dst/config" 2>/dev/null || true
+  chmod 644 "$dst/config/database.php" 2>/dev/null || true
 }
-fix_permissions(){ local dst="$1"; mkdir -p "$dst/storage" "$dst/config"; chmod -R u+rwX,go-rwx "$dst/storage" "$dst/config" || true; id www >/dev/null 2>&1 && chown -R www:www "$dst/storage" "$dst/config" || true; }
+fix_permissions(){
+  local dst="$1"
+  mkdir -p "$dst/storage" "$dst/config"
+  chmod 755 "$dst" "$dst/config" 2>/dev/null || true
+  chmod 644 "$dst/config/database.php" 2>/dev/null || true
+  chmod -R u+rwX,go+rwX "$dst/storage" 2>/dev/null || true
+  id www >/dev/null 2>&1 && chown -R www:www "$dst/storage" 2>/dev/null || true
+}
 setup_cron_native(){ local dst="$1" php_bin="$2"; echo "* * * * * root cd ${dst} && ${php_bin} scheduler.php >> ${dst}/storage/step-scheduler.log 2>&1" > /etc/cron.d/step-system; chmod 0644 /etc/cron.d/step-system; success "已创建计划任务 /etc/cron.d/step-system"; }
 
 install_bt_php(){

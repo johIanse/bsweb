@@ -13,7 +13,11 @@ chown -R mysql:mysql /run/mysqld /var/lib/mysql
 # Normalize permissions for bind-mounted app files. Some NAS/file-manager
 # deployments create config files/directories as root with restrictive modes,
 # which makes PHP fail with "Permission denied" when requiring config files.
-chmod 755 /var/www/html /var/www/html/config /var/www/html/storage 2>/dev/null || true
+chmod 755 /var/www/html /var/www/html/config 2>/dev/null || true
+chmod 775 /var/www/html/storage 2>/dev/null || true
+if id www-data >/dev/null 2>&1; then
+  chown -R www-data:www-data /var/www/html/storage 2>/dev/null || true
+fi
 [ -f /var/www/html/config/database.php ] && chmod 644 /var/www/html/config/database.php 2>/dev/null || true
 
 if [ ! -d /var/lib/mysql/mysql ]; then

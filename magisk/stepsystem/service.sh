@@ -18,6 +18,7 @@ PIDFILE=$RUNDIR/php.pid
 SDLOG=/sdcard/步数管理-service.log
 
 mkdir -p "$LOGDIR" "$RUNDIR" "$DATADIR" "$TMPDIR_STEP" "$SESSIONDIR" "$WEB/storage"
+chmod 755 "$BASE" "$LOGDIR" "$RUNDIR" "$DATADIR" "$TMPDIR_STEP" "$SESSIONDIR" "$WEB/storage" 2>/dev/null || true
 
 log(){
   line="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
