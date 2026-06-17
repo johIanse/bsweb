@@ -20,7 +20,7 @@ DEFAULT_INSTALL_DIR="/www/wwwroot/step-system"
 DEFAULT_DB_NAME="step_system"
 DEFAULT_DB_USER="step_user"
 DEFAULT_ADMIN_USER="admin"
-DEFAULT_ADMIN_PASS="admin"
+DEFAULT_ADMIN_PASS="admin123"
 DEFAULT_PHP_EXTS=(pdo pdo_mysql mysqli curl mbstring openssl json fileinfo session iconv)
 NODE_PACKAGES=(got@11 tough-cookie iconv-lite global-agent hpagent)
 
@@ -514,19 +514,30 @@ reset_admin_command(){
   ensure_basic_tools
   ensure_docker
   cd "$SCRIPT_DIR"
-  local root_pass admin_user admin_pass
+  local admin_user admin_pass
+  admin_user="${CLI_ADMIN_USER:-${2:-}}"
+  admin_pass="${CLI_ADMIN_PASS:-${3:-}}"
+  [[ -z "$admin_user" || "$admin_user" == --* ]] && admin_user="$(ask "管理员账号" "$DEFAULT_ADMIN_USER")"
+  [[ -z "$admin_pass" || "$admin_pass" == --* ]] && admin_pass="$(ask "管理员密码" "$DEFAULT_ADMIN_PASS")"
+
+  if docker ps -a --format '{{.Names}}' | grep -qx "$SINGLE_SERVICE"; then
+    info "检测到单容器服务：${SINGLE_SERVICE}"
+    compose_single_cmd up -d
+    wait_single_container
+    init_admin_single_with_values "$admin_user" "$admin_pass"
+    success "请打开站点首页使用管理员账号登录"
+    return 0
+  fi
+
+  local root_pass
   root_pass="$(env_get "$SCRIPT_DIR/.env" MYSQL_ROOT_PASSWORD)"
-  [[ -n "$root_pass" ]] || { err "未在 .env 找到 MYSQL_ROOT_PASSWORD，请先运行：sudo bash install.sh --docker-repair"; exit 1; }
+  [[ -n "$root_pass" ]] || { err "未在 .env 找到 MYSQL_ROOT_PASSWORD，请先运行：sudo bash install.sh --docker-repair 或 --single"; exit 1; }
   compose_cmd up -d
   if ! wait_mysql_container "$root_pass"; then
     warn "当前 .env 密码无法登录 MySQL。若是新安装，请先运行：sudo bash install.sh --docker-repair 并选择重置 MySQL 数据卷。"
     exit 1
   fi
   ensure_mysql_remote_root "$root_pass"
-  admin_user="${2:-}"
-  admin_pass="${3:-}"
-  [[ -z "$admin_user" ]] && admin_user="$(ask "管理员账号" "$DEFAULT_ADMIN_USER")"
-  if [[ -z "$admin_pass" ]]; then admin_pass="$(ask "管理员密码" "$DEFAULT_ADMIN_PASS")"; fi
   init_admin_docker_with_values "$root_pass" "$admin_user" "$admin_pass"
   success "请打开站点首页使用管理员账号登录"
 }
@@ -697,7 +708,8 @@ case "${ACTION:-}" in
   sudo bash install.sh --docker-repair Docker 双容器安装/修复
   sudo bash install.sh --single        Docker 单容器安装/修复
   sudo bash install.sh --single --admin-user 账号 --admin-pass 密码
-  sudo bash install.sh --reset-admin   重置后台管理员
+  sudo bash install.sh --reset-admin   重置后台管理员（自动识别单容器/双容器）
+  sudo bash install.sh --reset-admin --admin-user 账号 --admin-pass 密码
   bash install.sh --status             查看状态
 EOF_HELP
     ;;
