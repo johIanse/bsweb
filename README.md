@@ -29,14 +29,14 @@ curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.
 安装完成后默认管理员为：
 
 ```text
-账号：johIanse
+账号：admin
 密码：admin123
 ```
 
 如果想一次安装并明确指定管理员账号密码，推荐直接复制下面这条：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --single --admin-user johIanse --admin-pass admin123
+curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --single --admin-user admin --admin-pass admin123
 ```
 
 #### Docker 双容器安装/修复
@@ -58,7 +58,7 @@ curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.
 也可以直接指定账号密码，避免交互输入：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --reset-admin --admin-user johIanse --admin-pass admin123
+curl -fsSL https://raw.githubusercontent.com/johIanse/bsweb/main/install-online.sh | sudo bash -s -- --reset-admin --admin-user admin --admin-pass admin123
 ```
 
 一键脚本会自动下载 GitHub 最新源码；如果目标目录已存在，会先备份旧目录，并保留 `.env` 和 `config/database.php`。
