@@ -3,7 +3,7 @@ namespace StepSystem\Services;
 use StepSystem\Core\Database;
 class StepRunner{
     public static function run(array $user){
-        $username=trim($user['zepp_username']??'');$password=trim($user['zepp_password']??'');
+        $username=trim((string)($user['zepp_username']??''));$password=(string)($user['zepp_password']??'');
         $min=max(1,(int)($user['step_min']??3000));$max=max($min,(int)($user['step_max']??8000));$steps=self::pickSteps($user['id'],$min,$max);
         if($username===''||$password==='')return self::log($user['id'],0,'error','请先保存 Zepp Life/小米运动账号密码');
         $cool=max(0,(int)Setting::get('cooldown_seconds','300'));$ck='step_last_run_'.md5($username);$last=(int)Setting::get($ck,'0');
@@ -27,7 +27,7 @@ class StepRunner{
     }
 
     public static function validateLogin($username,$password){
-        $username=trim((string)$username);$password=trim((string)$password);
+        $username=trim((string)$username);$password=(string)$password;
         if($username===''||$password==='')return ['status'=>'error','message'=>'请填写 Zepp Life/小米运动账号密码'];
         $cache=self::tokenCache($username);
         $script=__DIR__.'/../../step.js';
@@ -66,7 +66,10 @@ class StepRunner{
         $proxyText='';
         if($text==='' )return '步数提交失败：执行脚本无返回'.$proxyText;
         if(strpos($text,'429')!==false || stripos($text,'Too Many Requests')!==false)return '步数提交失败：Zepp/小米接口返回 429 限流。建议暂停 2 小时后再试，或不要多个系统用户共用同一个 Zepp 账号'.$proxyText;
-        if(stripos($text,'password')!==false || strpos($text,'登录')!==false || strpos($text,'账号')!==false)return '步数提交失败：账号或密码可能不正确，请检查 Zepp Life/小米运动账号配置'.$proxyText;
+        if(strpos($text,'密码错误')!==false || stripos($text,'invalid password')!==false)return '步数提交失败：账号或密码可能不正确，请检查 Zepp Life/小米运动账号配置'.$proxyText;
+        if(strpos($text,'登录token接口请求失败')!==false)return '步数提交失败：Zepp 登录接口无正常响应，可能是网络、代理、风控或接口变更，请稍后重试'.$proxyText;
+        if(strpos($text,'获取重定向链接失败')!==false || strpos($text,'获取access失败')!==false)return '步数提交失败：Zepp 登录流程异常，可能是接口风控或接口变更，请稍后重试'.$proxyText;
+        if(strpos($text,'登录')!==false || strpos($text,'账号')!==false)return '步数提交失败：Zepp 登录接口返回异常，请检查账号格式或稍后重试'.$proxyText;
         if(strpos($text,'NODE_BINARY_NOT_FOUND')!==false)return '步数提交失败：Magisk 包缺少 Node.js 运行时，请安装新版模块'.$proxyText;
         if(stripos($text,'Cannot find module')!==false)return '步数提交失败：Node.js 依赖缺失，请安装新版模块'.$proxyText;
         if(stripos($text,'timeout')!==false || strpos($text,'ETIMEDOUT')!==false)return '步数提交失败：网络连接超时，请稍后重试'.$proxyText;

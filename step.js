@@ -211,6 +211,15 @@ const logger = createLogger(is_debug)
     .finally(() => $.done())
 // ----------------------------------------
 // 工具类
+
+function normalizePhoneNumber(phone) {
+    const raw = String(phone || '').trim().replace(/[\s-]/g, '')
+    if (!raw) return raw
+    if (raw.startsWith('+')) return raw
+    if (/^86\d{11}$/.test(raw)) return `+${raw}`
+    return `+86${raw}`
+}
+
 function Xiaomi(user, pwd, step, userType) {
     return new (class {
         constructor(user, pwd) {
@@ -235,7 +244,7 @@ function Xiaomi(user, pwd, step, userType) {
         }
         // 登录参数 -- success
         async getCode() {
-            const username = this.userType === 'email' ? this.username : `+86${this.username}`
+            const username = this.userType === 'email' ? String(this.username).trim() : normalizePhoneNumber(this.username)
             const query = Object.entries({
                 client_id: 'HuaMi',
                 country_code: 'CN',
