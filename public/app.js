@@ -14,5 +14,19 @@ document.addEventListener('DOMContentLoaded',()=>{
     };
     render();setInterval(render,1000);
   }
+  const runLink=document.querySelector('[data-step-run-confirm]');
+  const runModal=document.getElementById('step-run-modal');
+  if(runLink&&runModal){
+    const ok=runModal.querySelector('[data-step-modal-ok]');
+    const cancel=runModal.querySelector('[data-step-modal-cancel]');
+    const close=()=>{runModal.classList.remove('show');runModal.setAttribute('aria-hidden','true')};
+    const open=e=>{e.preventDefault();runModal.classList.add('show');runModal.setAttribute('aria-hidden','false');setTimeout(()=>cancel&&cancel.focus(),30)};
+    runLink.addEventListener('click',open);
+    cancel&&cancel.addEventListener('click',close);
+    runModal.addEventListener('click',e=>{if(e.target===runModal)close()});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&runModal.classList.contains('show'))close()});
+    ok&&ok.addEventListener('click',()=>{ok.dataset.text=ok.textContent;ok.textContent='正在执行...';ok.style.opacity='.75';});
+  }
+
 
 });

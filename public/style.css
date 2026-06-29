@@ -129,3 +129,12 @@ body{padding-bottom:54px}.footer{position:fixed;left:0;right:0;bottom:0;z-index:
 
 /* OAuth login */
 .oauth-login-row{margin-top:12px}.yh-login{width:100%;background:linear-gradient(135deg,#16a34a,#0ea5e9);box-shadow:0 12px 30px rgba(14,165,233,.18)}
+
+/* Step run confirm modal */
+.step-modal-mask{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:22px;background:rgba(15,23,42,.46);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:.22s}
+.step-modal-mask.show{opacity:1;pointer-events:auto}
+.step-modal-card{width:min(420px,100%);text-align:center;background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.9);border-radius:26px;box-shadow:0 30px 90px rgba(15,23,42,.24);padding:28px;transform:translateY(12px) scale(.98);transition:.22s}
+.step-modal-mask.show .step-modal-card{transform:translateY(0) scale(1)}
+.step-modal-icon{width:64px;height:64px;margin:0 auto 14px;display:grid;place-items:center;border-radius:22px;background:linear-gradient(135deg,#ecfdf3,#eef4ff);font-size:32px;box-shadow:inset 0 0 0 1px rgba(18,183,106,.12)}
+.step-modal-card h3{margin:0 0 8px;font-size:24px;color:#101828}.step-modal-card .muted{margin:0 auto 20px;max-width:340px}.step-modal-actions{display:flex;gap:10px;justify-content:center}.step-modal-actions .btn,.step-modal-actions button{flex:1 1 0;box-shadow:none}
+@media(max-width:420px){.step-modal-card{padding:22px;border-radius:22px}.step-modal-actions{gap:8px}.step-modal-actions .btn,.step-modal-actions button{padding:11px 12px}}

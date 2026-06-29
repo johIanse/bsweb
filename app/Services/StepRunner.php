@@ -49,10 +49,10 @@ class StepRunner{
             if(strpos($text,'登录验证成功')!==false)return ['status'=>'success','message'=>'Zepp 账号登录数据仍有效，已使用上次保存数据','cached'=>true];
             if(strpos($text,'429')===false && stripos($text,'Too Many Requests')===false)break;
         }
-        if(strpos($lastText,'429')!==false || stripos($lastText,'Too Many Requests')!==false)return ['status'=>'error','message'=>'Zepp 接口限流，暂时无法验证账号，请稍后再试'];
+        if(strpos($lastText,'429')!==false || stripos($lastText,'Too Many Requests')!==false)return ['status'=>'error','message'=>'Zepp 接口限流，暂时无法验证账号，请稍后再试','debug'=>self::diagnosticTail($lastText)];
         $msg=self::friendlyError($lastText,$lastProxy);
-        if(strpos($msg,'账号或密码')!==false)return ['status'=>'error','message'=>'Zepp 账号或密码错误，无法保存配置'];
-        return ['status'=>'error','message'=>str_replace('步数提交失败','Zepp 登录验证失败',$msg)];
+        if(strpos($msg,'账号或密码')!==false)return ['status'=>'error','message'=>'Zepp 账号或密码错误，无法保存配置','debug'=>self::diagnosticTail($lastText)];
+        return ['status'=>'error','message'=>str_replace('步数提交失败','Zepp 登录验证失败',$msg),'debug'=>self::diagnosticTail($lastText)];
     }
 
     private static function pickSteps($userId,$min,$max){
@@ -60,6 +60,17 @@ class StepRunner{
         try{$s=Database::pdo()->prepare("SELECT MAX(steps) FROM step_logs WHERE user_id=? AND status='success' AND steps IS NOT NULL AND substr(created_at,1,10)=?");$s->execute([$userId,date('Y-m-d')]);$last=(int)$s->fetchColumn();}catch(\Throwable $e){}
         if($last>0){$min=max($min,$last+1);if($min>$max)$max=$min;}
         return random_int($min,$max);
+    }
+    private static function diagnosticTail($text){
+        $text=(string)$text;
+        $text=preg_replace('/OPENCLAW_TOKEN_CACHE:\{.*?\}(?:\r?\n|$)/s','OPENCLAW_TOKEN_CACHE:{***MASKED***}' . "\n",$text);
+        $text=preg_replace('/1[3-9][0-9]{9}/','***PHONE***',$text);
+        $text=preg_replace('/(loginToken|appToken)[\"\']?\s*[:=]\s*[\"\'][^\"\']+/i','$1=***',$text);
+        $lines=array_values(array_filter(array_map('trim',preg_split('/\r?\n/',$text)),function($v){return $v!=='';}));
+        $tail=array_slice($lines,-8);
+        $out=implode(' | ',$tail);
+        if(function_exists('mb_substr'))return mb_substr($out,0,220);
+        return substr($out,0,220);
     }
     private static function friendlyError($text,$proxy=''){
         $text=trim((string)$text);
@@ -70,8 +81,9 @@ class StepRunner{
         if(strpos($text,'登录token接口请求失败')!==false)return '步数提交失败：Zepp 登录接口无正常响应，可能是网络、代理、风控或接口变更，请稍后重试'.$proxyText;
         if(strpos($text,'获取重定向链接失败')!==false || strpos($text,'获取access失败')!==false)return '步数提交失败：Zepp 登录流程异常，可能是接口风控或接口变更，请稍后重试'.$proxyText;
         if(strpos($text,'登录')!==false || strpos($text,'账号')!==false)return '步数提交失败：Zepp 登录接口返回异常，请检查账号格式或稍后重试'.$proxyText;
-        if(strpos($text,'NODE_BINARY_NOT_FOUND')!==false)return '步数提交失败：Magisk 包缺少 Node.js 运行时，请安装新版模块'.$proxyText;
-        if(stripos($text,'Cannot find module')!==false)return '步数提交失败：Node.js 依赖缺失，请安装新版模块'.$proxyText;
+        if(strpos($text,'NODE_BINARY_NOT_FOUND')!==false)return '步数提交失败：容器缺少 Node.js 运行时，请安装/重建新版单容器镜像'.$proxyText;
+        if(strpos($text,'PHP_EXEC_DISABLED')!==false)return '步数提交失败：PHP 禁用了 exec，无法调用 Node.js；请取消 disable_functions 里的 exec'.$proxyText;
+        if(stripos($text,'Cannot find module')!==false)return '步数提交失败：Node.js 依赖缺失或 NODE_PATH 不正确，请安装/重建新版单容器镜像'.$proxyText;
         if(stripos($text,'timeout')!==false || strpos($text,'ETIMEDOUT')!==false)return '步数提交失败：网络连接超时，请稍后重试'.$proxyText;
         if(stripos($text,'ECONNRESET')!==false || stripos($text,'ECONNREFUSED')!==false)return '步数提交失败：网络连接异常，请稍后重试'.$proxyText;
         return '步数提交失败：第三方接口返回异常，请稍后重试'.$proxyText;
@@ -81,10 +93,16 @@ class StepRunner{
     private static function saveTokenCacheFromOutput($username,$text){if(preg_match('/OPENCLAW_TOKEN_CACHE:(\{.*?\})(?:\r?\n|$)/s',$text,$m)){ $data=json_decode($m[1],true); if(is_array($data)&&!empty($data['loginToken'])&&!empty($data['userId'])&&!empty($data['appToken']))Setting::set(self::tokenCacheKey($username),json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));}}
     private static function clearTokenCache($username){Setting::set(self::tokenCacheKey($username),'');}
     private static function executeNode($script,$username,$password,$steps,$proxy,$loginOnly=false,$ignoreCache=false,$cacheOnly=false){
-        $nodePath=__DIR__.'/../../node_modules';
+        $nodePaths=[];
+        foreach([__DIR__.'/../../node_modules','/opt/node_modules',getenv('NODE_PATH')?:''] as $np){
+            $np=trim((string)$np);
+            if($np!=='' && is_dir($np))$nodePaths[]=$np;
+        }
+        $nodePath=implode(PATH_SEPARATOR,array_values(array_unique($nodePaths)));
         $nodeBin=trim((string)(getenv('STEP_NODE_BIN')?:''));
         if($nodeBin!=='' && (!is_file($nodeBin)||!is_executable($nodeBin)))$nodeBin='';
-        if($nodeBin===''){
+        $disabled=array_map('trim',explode(',',(string)ini_get('disable_functions')));
+        if($nodeBin==='' && !in_array('shell_exec',$disabled,true)){
             $which=PHP_OS_FAMILY==='Windows'?'where node 2>NUL':'command -v node 2>/dev/null';
             $nodeBin=trim((string)shell_exec($which));
             if(strpos($nodeBin,"\n")!==false)$nodeBin=strtok($nodeBin,"\r\n");
@@ -112,14 +130,19 @@ class StepRunner{
             $envVars['XIAOMI_STEP_APP_TOKEN']=$cache['appToken']??'';
         }
         if($proxy){
-            $agent=$nodePath.'/global-agent/bootstrap.js';
-            if(!is_file($agent))$agent=$nodePath.'/global-agent/dist/bootstrap.js';
-            if(is_file($agent))$envVars['NODE_OPTIONS']='-r '.$agent;
+            $agent='';
+            foreach($nodePaths as $np){
+                foreach([$np.'/global-agent/bootstrap.js',$np.'/global-agent/dist/bootstrap.js'] as $candidate){
+                    if(is_file($candidate)){ $agent=$candidate; break 2; }
+                }
+            }
+            if($agent!=='')$envVars['NODE_OPTIONS']='-r '.$agent;
             $envVars['GLOBAL_AGENT_HTTP_PROXY']=$proxy;
             $envVars['HTTP_PROXY']=$proxy;
             $envVars['HTTPS_PROXY']=$proxy;
             $envVars['XIAOMI_STEP_PROXY']=$proxy;
         }
+        if(in_array('exec',$disabled,true))return [false,'PHP_EXEC_DISABLED',126];
         $cmd=self::envPrefix($envVars).' '.escapeshellarg($nodeBin).' '.escapeshellarg($script).' 2>&1';
         $out=[];$code=0;exec($cmd,$out,$code);return [$code===0,implode("\n",$out),$code];
     }
